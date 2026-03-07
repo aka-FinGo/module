@@ -10,20 +10,20 @@ jobs:
       - name: Repozitoriydan kodni olish
         uses: actions/checkout@v4
 
+      - name: Java 21 o'rnatish (Xatolik tuzatildi)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
       - name: Node.js o'rnatish
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Java o'rnatish
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
       - name: Veb fayllarni tayyorlash (www papkasi)
         run: |
-          mkdir www
+          mkdir -p www
           cp index.html style.css app.js sw.js manifest.json www/ 2>/dev/null || true
           cp *.png www/ 2>/dev/null || true
 
@@ -34,18 +34,22 @@ jobs:
           npx cap init "Aristokrat Yigish" "uz.aristokrat.yigish" --web-dir "www"
           npx cap add android
 
-      - name: Kamera ruxsati va Skrinshot himoyasini inyeksiya qilish (FLAG_SECURE)
+      - name: Android tizim sozlamalarini inyeksiya qilish
         run: |
-          # 1. Kameraga ruxsat
+          # 1. Kamera va Internet ruxsatlari
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          sed -i 's|<application|<uses-permission android:name="android.permission.CAMERA" />\n    <application|g' $MANIFEST_PATH
+          sed -i 's|<application|<uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <application|g' $MANIFEST_PATH
 
           # 2. Skrinshot va Screen Record ni bloklash (MainActivity.java ga FLAG_SECURE qoshish)
           FILE_PATH=$(find android -name "MainActivity.java")
           sed -i '/import com.getcapacitor.BridgeActivity;/a import android.os.Bundle;\nimport android.view.WindowManager;' $FILE_PATH
           sed -i '/public class MainActivity extends BridgeActivity {/a \    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);\n    }' $FILE_PATH
 
-      - name: APK ni yig'ish (Build)
+          # 3. ARM64 arxitekturasini ustuvor qilish (build.gradle)
+          GRADLE_APP_PATH="android/app/build.gradle"
+          sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "arm64-v8a", "armeabi-v7a"\n        }' $GRADLE_APP_PATH
+
+      - name: APK ni yig'ish (Build Debug)
         run: |
           cd android
           chmod +x gradlew
@@ -54,5 +58,5 @@ jobs:
       - name: APK ni yuklash (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: aristokrat-yigish-apk
+          name: aristokrat-yigish-v2-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
