@@ -34,21 +34,30 @@ jobs:
           npx cap init "Aristokrat Yigish" "uz.aristokrat.yigish" --web-dir "www"
           npx cap add android
 
-      - name: Android tizim sozlamalarini inyeksiya qilish (Fix Syntax)
+      - name: Android tizim sozlamalari va Skrinshot himoyasi
         run: |
-          # 1. Manifest ruxsatlari (Dublikat bo'lmasligi uchun sed mantiqi tozaladi)
+          # 1. Manifestga kamera ruxsatini qo'shish
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           sed -i '/<application/i \    <uses-permission android:name="android.permission.CAMERA" />' $MANIFEST_PATH
 
-          # 2. Skrinshot himoyasini inyeksiya qilish (Sintaksis to'liq tuzatildi)
+          # 2. MainActivity.java faylini FLAG_SECURE bilan noldan yozish
           FILE_PATH=$(find android -name "MainActivity.java")
-          
-          # Kerakli importlarni qo'shish
-          sed -i '/import com.getcapacitor.BridgeActivity;/a import android.os.Bundle;\nimport android.view.WindowManager;' $FILE_PATH
-          
-          # FLAG_SECURE funksiyasini klass ichiga to'g'ri joylashtirish
-          # BridgeActivity klassining ochilish qavsidan keyin onCreate metodini inyeksiya qilamiz
-          sed -i '/public class MainActivity extends BridgeActivity {/a \    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);\n    }' $FILE_PATH
+          cat <<EOF > "$FILE_PATH"
+package uz.aristokrat.yigish;
+
+import com.getcapacitor.BridgeActivity;
+import android.os.Bundle;
+import android.view.WindowManager;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Skrinshot va video yozishni bloklash
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+    }
+}
+EOF
 
           # 3. ARM64 arxitekturasini sozlash
           GRADLE_APP_PATH="android/app/build.gradle"
@@ -63,5 +72,5 @@ jobs:
       - name: APK ni yuklash (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: aristokrat-yigish-v3-apk
+          name: aristokrat-yigish-final-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
