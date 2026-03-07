@@ -6,8 +6,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Repozitoriydan kodni olish
+      - name: Kodni olish
         uses: actions/checkout@v4
 
       - name: Java 17 o'rnatish
@@ -21,30 +22,45 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Veb fayllarni tayyorlash (www papkasi)
+      - name: Android SDK muhit o'zgaruvchilari
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+
+      - name: www papkasini tayyorlash
         run: |
           mkdir -p www
-          cp index.html style.css app.js sw.js manifest.json www/ 2>/dev/null || true
-          cp *.png www/ 2>/dev/null || true
+          cp index.html style.css app.js sw.js manifest.json www/
+          cp icon-192.png icon-512.png www/ 2>/dev/null || true
 
-      - name: Capacitor o'rnatish va sozlash
+      - name: Capacitor o'rnatish
         run: |
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "Aristokrat Yigish" "uz.aristokrat.yigish" --web-dir "www"
+
+      - name: capacitor.config.json yaratish
+        run: |
+          cat > capacitor.config.json << 'EOF'
+          {
+            "appId": "uz.aristokrat.yigish",
+            "appName": "Aristokrat Yigish",
+            "webDir": "www",
+            "android": {
+              "allowMixedContent": true
+            }
+          }
+          EOF
+
+      - name: Android platformasini qo'shish va sync
+        run: |
           npx cap add android
           npx cap sync android
 
-      - name: Android tizim sozlamalari va Skrinshot himoyasi
+      - name: MainActivity.java - FLAG_SECURE
         run: |
-          # 1. Manifestga kamera ruxsatini qo'shish
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.CAMERA" />|' $MANIFEST_PATH
-
-          # 2. MainActivity.java faylini FLAG_SECURE bilan noldan yozish
-          FILE_PATH=$(find android -name "MainActivity.java" | head -1)
-          echo "File topildi: $FILE_PATH"
-          cat > "$FILE_PATH" << 'JAVAEOF'
+          FILE=$(find android -name "MainActivity.java" | head -1)
+          cat > "$FILE" << 'EOF'
 package uz.aristokrat.yigish;
 
 import com.getcapacitor.BridgeActivity;
@@ -61,24 +77,38 @@ public class MainActivity extends BridgeActivity {
         );
     }
 }
-JAVAEOF
+EOF
 
-          # 3. ARM64 arxitekturasini sozlash (to'g'ri multiline)
-          GRADLE_APP_PATH="android/app/build.gradle"
-          sed -i '/defaultConfig {/a\        ndk {\n            abiFilters "arm64-v8a", "armeabi-v7a"\n        }' $GRADLE_APP_PATH
-
-      - name: Android SDK versiyalarini tekshirish
+      - name: AndroidManifest - CAMERA ruxsati
         run: |
-          cat android/app/build.gradle | grep -E "compileSdk|minSdk|targetSdk"
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "CAMERA" "$MANIFEST"; then
+            sed -i 's|</manifest>|    <uses-permission android:name="android.permission.CAMERA" />\n</manifest>|' "$MANIFEST"
+          fi
 
-      - name: APK ni yig'ish (Build Debug)
+      - name: build.gradle - ARM64 abiFilters
+        run: |
+          python3 - << 'PYEOF'
+with open("android/app/build.gradle", "r") as f:
+    content = f.read()
+if "abiFilters" not in content:
+    ndk = '\n        ndk {\n            abiFilters "arm64-v8a", "armeabi-v7a"\n        }'
+    content = content.replace("defaultConfig {", "defaultConfig {" + ndk, 1)
+    with open("android/app/build.gradle", "w") as f:
+        f.write(content)
+    print("build.gradle yangilandi")
+else:
+    print("abiFilters allaqachon bor")
+PYEOF
+
+      - name: APK Build
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: APK ni yuklash (Artifact)
+      - name: APK yuklash
         uses: actions/upload-artifact@v4
         with:
-          name: aristokrat-yigish-final-apk
+          name: aristokrat-yigish-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
