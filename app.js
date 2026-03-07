@@ -1,22 +1,30 @@
-// O'ZINGIZNING WEB APP URL MANZILINGIZNI SHU YERGA QO'YING
+// DIQQAT: O'ZINGIZNING WEB APP URL MANZILINGIZNI SHU YERGA QO'YING
 const API_URL = "https://script.google.com/macros/s/AKfycbzbvxJhu--zsieahPiBS8-HkUaFQj4GJykOYQi9Agp-skoOHyEY30c8NYRm6Qdujcia/exec";
 
-// Skaner obyekti (standart barcha 1D Barkod va 2D QR kodlarni o'qiydi)
 const html5QrCode = new Html5Qrcode("reader");
-
 const btnStartScan = document.getElementById("btn-start-scan");
 const readerContainer = document.getElementById("reader-container");
 const resultContainer = document.getElementById("result-container");
 const contentArea = document.getElementById("content-area");
-const btnPdf = document.getElementById("btn-pdf");
-const btnVideo = document.getElementById("btn-video");
-
-const fullscreenModal = document.getElementById("fullscreen-modal");
-const iframeContainer = document.getElementById("iframe-container");
-const antiLeakShield = document.getElementById("anti-leak-shield");
-const modalTitleText = document.getElementById("modal-title-text");
+const tabs = document.querySelectorAll(".btn-tab");
 
 let currentData = null;
+
+window.onload = () => {
+    let instructionModal = document.getElementById('instruction-modal');
+    if (instructionModal && localStorage.getItem('hideInstructions') !== 'true') {
+        instructionModal.classList.remove('hidden');
+    }
+};
+
+window.closeInstructions = function() {
+    let cb = document.getElementById('dont-show-again');
+    if (cb && cb.checked) {
+        localStorage.setItem('hideInstructions', 'true');
+    }
+    let instructionModal = document.getElementById('instruction-modal');
+    if(instructionModal) instructionModal.classList.add('hidden');
+};
 
 btnStartScan.addEventListener("click", () => {
     btnStartScan.classList.add("hidden");
@@ -31,12 +39,12 @@ btnStartScan.addEventListener("click", () => {
     }).catch(err => alert("Kamera topilmadi!"));
 });
 
-function stopScanner() {
+window.stopScanner = function() {
     html5QrCode.stop().then(() => {
         readerContainer.classList.add("hidden");
         btnStartScan.classList.remove("hidden");
     }).catch(err => console.log(err));
-}
+};
 
 function onScanSuccess(decodedText) {
     html5QrCode.stop().then(() => {
@@ -59,8 +67,8 @@ function fetchData(barcode) {
             currentData = data;
             document.getElementById("modul-title").textContent = `Artikul: ${data.artikul}`;
             
-            btnPdf.classList.toggle("hidden", !data.pdfUrl);
-            btnVideo.classList.toggle("hidden", !data.videoUrl);
+            document.getElementById("btn-pdf").classList.toggle("hidden", !data.pdfUrl);
+            document.getElementById("btn-video").classList.toggle("hidden", !data.videoUrl);
             
             renderFurnitura();
         })
@@ -69,12 +77,23 @@ function fetchData(barcode) {
         });
 }
 
+function updateTabStyles(activeId) {
+    tabs.forEach(tab => tab.classList.remove("active"));
+    if(activeId) {
+        let activeTab = document.getElementById(activeId);
+        if(activeTab) activeTab.classList.add("active");
+    }
+}
+
 function renderFurnitura() {
+    updateTabStyles("btn-furnitura");
     if (!currentData || !currentData.furnituralar) return;
+    
     if (currentData.furnituralar.length === 0) {
         contentArea.innerHTML = "<p style='text-align:center; padding: 20px;'>Bu modul uchun furnitura yo'q.</p>";
         return;
     }
+    
     let html = "";
     currentData.furnituralar.forEach(item => {
         html += `<div class="fur-item"><span>${item.nomi}</span> <strong>${item.soni} ${item.ulchov}</strong></div>`;
@@ -82,34 +101,63 @@ function renderFurnitura() {
     contentArea.innerHTML = html;
 }
 
-// TO'LIQ EKRANLI READER (PDF va Video uchun)
-function openFullscreen(url, type) {
+// VIDEO VA CHIZMA UCHUN TAB MANTIG'I
+function renderIframe(url, tabId, type) {
+    updateTabStyles(tabId);
     let finalUrl = url;
-    modalTitleText.textContent = type === "pdf" ? "Chizmani ko'rish" : "Videoni ko'rish";
 
     if (type === "video") {
-        antiLeakShield.classList.add("hidden"); // Videoda to'siq kerak emas
         if (url.includes("youtu.be/")) finalUrl = `https://www.youtube.com/embed/${url.split("youtu.be/")[1].split("?")[0]}`;
         else if (url.includes("youtube.com/watch")) finalUrl = `https://www.youtube.com/embed/${new URL(url).searchParams.get("v")}`;
     } else if (type === "pdf") {
-        antiLeakShield.classList.remove("hidden"); // PDF da o'g'irlash tugmasini to'samiz
         if (url.includes("drive.google.com/file/d/")) finalUrl = url.replace(/\/view.*/, "/preview");
     }
 
-    iframeContainer.innerHTML = `<iframe src="${finalUrl}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
-    fullscreenModal.classList.remove("hidden");
+    // Ichki oyna va Fullscreen tugmasini shakllantirish (Anti-leak oyna bu yerda ham ishlangan)
+    contentArea.innerHTML = `
+        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+            <button class="btn btn-primary" style="padding:10px; font-size:14px; background:#27ae60;" onclick="openNativeFullscreen('${finalUrl}', '${type}')">⛶ Katta ekranda ochish</button>
+        </div>
+        <div style="position:relative; width:100%; height:400px; border-radius:8px; overflow:hidden;">
+            ${type === "pdf" ? '<div style="position:absolute; top:0; right:0; width:60px; height:60px; z-index:10; background:transparent;"></div>' : ''}
+            <iframe src="${finalUrl}" style="width:100%; height:100%; border:none;" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+        </div>
+    `;
 }
 
-function closeFullscreen() {
-    iframeContainer.innerHTML = ""; // Yopilganda videoni to'xtatish uchun
-    fullscreenModal.classList.add("hidden");
-}
+// TO'LIQ EKRANLI MODALNI DINAMIK YARATISH (HTML QARAMLILIGI YO'Q)
+window.openNativeFullscreen = function(url, type) {
+    let overlay = document.createElement("div");
+    overlay.id = "dynamic-fullscreen-overlay";
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100vw";
+    overlay.style.height = "100vh";
+    overlay.style.backgroundColor = "#000";
+    overlay.style.zIndex = "99999";
+    overlay.style.display = "flex";
+    overlay.style.flexDirection = "column";
 
-btnPdf.addEventListener("click", () => openFullscreen(currentData.pdfUrl, "pdf"));
-btnVideo.addEventListener("click", () => openFullscreen(currentData.videoUrl, "video"));
+    overlay.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:#2c3e50;">
+            <span style="color:white; font-weight:bold; font-size:18px;">${type === 'pdf' ? 'Chizma' : 'Video'}</span>
+            <button style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; font-size:16px;" onclick="document.getElementById('dynamic-fullscreen-overlay').remove()">Yopish (X)</button>
+        </div>
+        <div style="position:relative; flex-grow:1; width:100%; background:#333;">
+            ${type === "pdf" ? '<div style="position:absolute; top:0; right:0; width:60px; height:60px; z-index:10; background:transparent;"></div>' : ''}
+            <iframe src="${url}" style="width:100%; height:100%; border:none;" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+};
 
-function resetApp() {
+document.getElementById("btn-furnitura").addEventListener("click", renderFurnitura);
+document.getElementById("btn-pdf").addEventListener("click", () => renderIframe(currentData.pdfUrl, "btn-pdf", "pdf"));
+document.getElementById("btn-video").addEventListener("click", () => renderIframe(currentData.videoUrl, "btn-video", "video"));
+
+window.resetApp = function() {
     resultContainer.classList.add("hidden");
     btnStartScan.classList.remove("hidden");
     currentData = null;
-}
+};
