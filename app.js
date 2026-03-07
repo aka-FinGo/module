@@ -1,5 +1,5 @@
 // O'ZINGIZNING WEB APP URL MANZILINGIZNI SHU YERGA QO'YING
-const API_URL = "https://script.google.com/macros/s/AKfycbxjW1GHtJrun8bJCGiXvz1hOkEgWzpTSYhe_TapCJ2WIOIs6PNq-iFr1lehDI18PjI3/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzbvxJhu--zsieahPiBS8-HkUaFQj4GJykOYQi9Agp-skoOHyEY30c8NYRm6Qdujcia/exec";
 
 const html5QrCode = new Html5Qrcode("reader");
 const btnStartScan = document.getElementById("btn-start-scan");
@@ -10,7 +10,6 @@ const tabs = document.querySelectorAll(".btn-tab");
 
 let currentData = null;
 
-// Yo'riqnomani tekshirish (Sahifa yuklanganda)
 window.onload = () => {
     if (localStorage.getItem('hideInstructions') !== 'true') {
         document.getElementById('instruction-modal').classList.remove('hidden');
@@ -24,7 +23,6 @@ function closeInstructions() {
     document.getElementById('instruction-modal').classList.add('hidden');
 }
 
-// Skanerni yoqish
 btnStartScan.addEventListener("click", () => {
     btnStartScan.classList.add("hidden");
     resultContainer.classList.add("hidden");
@@ -38,7 +36,6 @@ btnStartScan.addEventListener("click", () => {
     }).catch(err => alert("Kamera topilmadi!"));
 });
 
-// Skanerni majburiy to'xtatish
 function stopScanner() {
     html5QrCode.stop().then(() => {
         readerContainer.classList.add("hidden");
@@ -47,7 +44,6 @@ function stopScanner() {
 }
 
 function onScanSuccess(decodedText) {
-    // Skan muvaffaqiyatli bo'lsa, darhol kamerani o'chiramiz
     html5QrCode.stop().then(() => {
         readerContainer.classList.add("hidden");
         fetchData(decodedText);
@@ -99,9 +95,26 @@ function renderFurnitura() {
     contentArea.innerHTML = html;
 }
 
+// YOUTUBE VA DRIVE SILKALARINI AVTOMATIK MOSLASHTIRUVCHI FUNKSIYA
 function renderIframe(url, tabId) {
     updateTabStyles(tabId);
-    contentArea.innerHTML = `<iframe src="${url}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    let finalUrl = url;
+
+    // YouTube konvertatsiyasi
+    if (url.includes("youtu.be/")) {
+        let videoId = url.split("youtu.be/")[1].split("?")[0];
+        finalUrl = `https://www.youtube.com/embed/${videoId}`;
+    } else if (url.includes("youtube.com/watch")) {
+        let videoId = new URL(url).searchParams.get("v");
+        finalUrl = `https://www.youtube.com/embed/${videoId}`;
+    }
+
+    // Google Drive konvertatsiyasi (view ni preview ga o'zgartirish)
+    if (url.includes("drive.google.com/file/d/")) {
+        finalUrl = url.replace(/\/view.*/, "/preview");
+    }
+
+    contentArea.innerHTML = `<iframe src="${finalUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
 }
 
 document.getElementById("btn-furnitura").addEventListener("click", renderFurnitura);
