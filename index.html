@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yig'ish Bo'limi</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Yig'ish Tizimi</h1>
+        </header>
+        <main>
+            <div id="reader"></div>
+            <div id="result-container" class="hidden">
+                <h2 id="modul-title"></h2>
+                <div class="actions">
+                    <button id="btn-furnitura" class="btn">Furnituralar</button>
+                    <button id="btn-pdf" class="btn hidden">Chizma</button>
+                    <button id="btn-video" class="btn hidden">Video</button>
+                </div>
+                <div id="content-area"></div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
