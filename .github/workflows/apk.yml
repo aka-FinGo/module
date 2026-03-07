@@ -1,0 +1,58 @@
+name: Build Android APK (Capacitor)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repozitoriydan kodni olish
+        uses: actions/checkout@v4
+
+      - name: Node.js o'rnatish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Java o'rnatish
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Veb fayllarni tayyorlash (www papkasi)
+        run: |
+          mkdir www
+          cp index.html style.css app.js sw.js manifest.json www/ 2>/dev/null || true
+          cp *.png www/ 2>/dev/null || true
+
+      - name: Capacitor o'rnatish va sozlash
+        run: |
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "Aristokrat Yigish" "uz.aristokrat.yigish" --web-dir "www"
+          npx cap add android
+
+      - name: Kamera ruxsati va Skrinshot himoyasini inyeksiya qilish (FLAG_SECURE)
+        run: |
+          # 1. Kameraga ruxsat
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          sed -i 's|<application|<uses-permission android:name="android.permission.CAMERA" />\n    <application|g' $MANIFEST_PATH
+
+          # 2. Skrinshot va Screen Record ni bloklash (MainActivity.java ga FLAG_SECURE qoshish)
+          FILE_PATH=$(find android -name "MainActivity.java")
+          sed -i '/import com.getcapacitor.BridgeActivity;/a import android.os.Bundle;\nimport android.view.WindowManager;' $FILE_PATH
+          sed -i '/public class MainActivity extends BridgeActivity {/a \    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);\n    }' $FILE_PATH
+
+      - name: APK ni yig'ish (Build)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: APK ni yuklash (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: aristokrat-yigish-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
