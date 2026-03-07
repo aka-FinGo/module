@@ -1,15 +1,32 @@
-/* Matnni nusxalashni taqiqlash (Anti-leak) */
 * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-body { font-family: sans-serif; background-color: #f4f7f6; color: #333; }
+body { font-family: sans-serif; background-color: #eef2f5; color: #333; }
 #app { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; height: 100vh; }
 header { background: #2c3e50; color: white; padding: 15px; text-align: center; }
-main { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
-#reader { width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: #000; }
+main { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
+
 .hidden { display: none !important; }
-.actions { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-.btn { flex: 1; padding: 12px; border: none; border-radius: 6px; background: #3498db; color: white; font-size: 16px; cursor: pointer; }
-.btn:active { background: #2980b9; }
-#content-area { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); overflow-y: auto; flex-grow: 1; }
-.fur-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 16px; }
-.fur-item strong { color: #e74c3c; }
+.btn { padding: 12px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
+.btn-primary { background: #3498db; color: white; }
+.btn-danger { background: #e74c3c; color: white; margin-top: 10px; width: 100%; }
+.btn-large { width: 100%; padding: 15px; font-size: 18px; }
+.btn-tab { flex: 1; background: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7; }
+.btn-tab.active { background: #3498db; color: white; border-color: #3498db; }
+
+#reader-container { width: 100%; max-width: 400px; margin-bottom: 20px; }
+#reader { width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
+#result-container { width: 100%; display: flex; flex-direction: column; }
+.result-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; }
+#modul-title { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; color: #2c3e50; }
+.actions { display: flex; gap: 8px; margin-bottom: 15px; }
+#content-area { min-height: 200px; }
+
+.fur-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+.fur-item strong { color: #e74c3c; font-size: 1.1em; }
 iframe { width: 100%; height: 400px; border: none; border-radius: 8px; }
+
+/* Modal styles */
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; }
+.modal-content h2 { color: #2c3e50; margin-bottom: 5px; }
+.modal-content label { display: flex; align-items: center; gap: 10px; font-size: 16px; margin: 10px 0; font-weight: bold; cursor: pointer; }
+.modal-content input[type="checkbox"] { width: 20px; height: 20px; }
