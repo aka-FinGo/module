@@ -34,27 +34,16 @@ jobs:
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
       - name: capacitor.config.json yaratish
-        run: printf '{"appId":"uz.aristokrat.yigish","appName":"Aristokrat Yigish","webDir":"www","android":{"allowMixedContent":true}}' > capacitor.config.json
+        run: |
+          printf '{"appId":"uz.aristokrat.yigish","appName":"Aristokrat Yigish","webDir":"www","android":{"allowMixedContent":true}}' > capacitor.config.json
 
       - name: Android platformasi
         run: |
           npx cap add android
           npx cap sync android
 
-      - name: gradle.properties - Java 21 manba moslik
-        run: |
-          echo "org.gradle.java.home=$JAVA_HOME" >> android/gradle.properties
-          echo "android.useAndroidX=true" >> android/gradle.properties
-
-      - name: MainActivity.java - FLAG_SECURE
-        run: |
-          FILE=$(find android -name "MainActivity.java" | head -1)
-          printf 'package uz.aristokrat.yigish;\n\nimport com.getcapacitor.BridgeActivity;\nimport android.os.Bundle;\nimport android.view.WindowManager;\n\npublic class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);\n    }\n}\n' > "$FILE"
-
-      - name: AndroidManifest - CAMERA ruxsati
-        run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          grep -q "CAMERA" "$MANIFEST" || sed -i 's|</manifest>|    <uses-permission android:name="android.permission.CAMERA" />\n</manifest>|' "$MANIFEST"
+      - name: Android sozlamalar (Kotlin fix + FLAG_SECURE + CAMERA)
+        run: python3 fix_android.py
 
       - name: APK Build
         run: |
