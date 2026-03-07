@@ -7,6 +7,7 @@ const readerContainer = document.getElementById("reader-container");
 const resultContainer = document.getElementById("result-container");
 const contentArea = document.getElementById("content-area");
 const tabs = document.querySelectorAll(".btn-tab");
+const viewportMeta = document.querySelector('meta[name="viewport"]');
 
 let currentData = null;
 
@@ -101,7 +102,7 @@ function renderFurnitura() {
     contentArea.innerHTML = html;
 }
 
-// VIDEO VA CHIZMA UCHUN TAB MANTIG'I
+// VIDEO VA CHIZMA (GOOGLE DOCS VIEWER + ZOOM) MANTIG'I
 function renderIframe(url, tabId, type) {
     updateTabStyles(tabId);
     let finalUrl = url;
@@ -110,23 +111,32 @@ function renderIframe(url, tabId, type) {
         if (url.includes("youtu.be/")) finalUrl = `https://www.youtube.com/embed/${url.split("youtu.be/")[1].split("?")[0]}`;
         else if (url.includes("youtube.com/watch")) finalUrl = `https://www.youtube.com/embed/${new URL(url).searchParams.get("v")}`;
     } else if (type === "pdf") {
-        if (url.includes("drive.google.com/file/d/")) finalUrl = url.replace(/\/view.*/, "/preview");
+        // Drive silkasidan ID ni qirqib olib toza Google Docs Viewer ga yuborish
+        let fileIdMatch = url.match(/[-\w]{25,}/);
+        if (fileIdMatch) {
+            let fileId = fileIdMatch[0];
+            finalUrl = `https://docs.google.com/viewer?url=${encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fileId)}&embedded=true`;
+        }
     }
 
-    // Ichki oyna va Fullscreen tugmasini shakllantirish (Anti-leak oyna bu yerda ham ishlangan)
     contentArea.innerHTML = `
         <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
             <button class="btn btn-primary" style="padding:10px; font-size:14px; background:#27ae60;" onclick="openNativeFullscreen('${finalUrl}', '${type}')">⛶ Katta ekranda ochish</button>
         </div>
-        <div style="position:relative; width:100%; height:400px; border-radius:8px; overflow:hidden;">
-            ${type === "pdf" ? '<div style="position:absolute; top:0; right:0; width:60px; height:60px; z-index:10; background:transparent;"></div>' : ''}
-            <iframe src="${finalUrl}" style="width:100%; height:100%; border:none;" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+        <div class="iframe-wrapper">
+            ${type === "pdf" ? '<div class="anti-leak-shield"></div>' : ''}
+            <iframe src="${finalUrl}" class="secure-iframe" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
         </div>
     `;
 }
 
-// TO'LIQ EKRANLI MODALNI DINAMIK YARATISH (HTML QARAMLILIGI YO'Q)
+// TO'LIQ EKRANLI MODAL (ZOOM VA ANTI-DOWNLOAD)
 window.openNativeFullscreen = function(url, type) {
+    // 2 barmoqli Zoom ni yoqish (Faqat Chizma ochilganda)
+    if (viewportMeta) {
+        viewportMeta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes");
+    }
+
     let overlay = document.createElement("div");
     overlay.id = "dynamic-fullscreen-overlay";
     overlay.style.position = "fixed";
@@ -142,14 +152,23 @@ window.openNativeFullscreen = function(url, type) {
     overlay.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:#2c3e50;">
             <span style="color:white; font-weight:bold; font-size:18px;">${type === 'pdf' ? 'Chizma' : 'Video'}</span>
-            <button style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; font-size:16px;" onclick="document.getElementById('dynamic-fullscreen-overlay').remove()">Yopish (X)</button>
+            <button style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; font-size:16px;" onclick="closeNativeFullscreen()">Yopish (X)</button>
         </div>
-        <div style="position:relative; flex-grow:1; width:100%; background:#333;">
-            ${type === "pdf" ? '<div style="position:absolute; top:0; right:0; width:60px; height:60px; z-index:10; background:transparent;"></div>' : ''}
-            <iframe src="${url}" style="width:100%; height:100%; border:none;" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+        <div class="iframe-wrapper" style="flex-grow:1; height:100%; border-radius:0;">
+            ${type === "pdf" ? '<div class="anti-leak-shield"></div>' : ''}
+            <iframe src="${url}" class="secure-iframe" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
         </div>
     `;
     document.body.appendChild(overlay);
+};
+
+window.closeNativeFullscreen = function() {
+    // Zoom ni bloklash (Eski holatga qaytarish)
+    if (viewportMeta) {
+        viewportMeta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no");
+    }
+    let overlay = document.getElementById('dynamic-fullscreen-overlay');
+    if (overlay) overlay.remove();
 };
 
 document.getElementById("btn-furnitura").addEventListener("click", renderFurnitura);
