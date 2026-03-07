@@ -1,5 +1,5 @@
 // GitHub Actions bu yozuvni haqiqiy manzilga almashtiradi
-const API_URL = "https://script.google.com/macros/s/AKfycbx9BkY8WxNcy94dHwCltpe9KOkEQqYOXnt1ybflaCUxct3Fltp3EC2NCDhIpehz4ZIo/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby07Hk5uYEHNTWWDIoX72JxCMiGu--H222g-6lJyS6yctivfWhqqWtqkNtOUvtT85nk/exec";
 
 const html5QrCode = new Html5Qrcode("reader");
 const resultContainer = document.getElementById("result-container");
