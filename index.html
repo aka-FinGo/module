@@ -3,49 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Yig'ish Bo'limi</title>
+    <title>Yig'ish Tizimi</title>
     <link rel="stylesheet" href="style.css">
-    
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c3e50">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
+    <div id="instruction-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Tizimdan foydalanish</h2>
+            <p>1. "Skanerlashni boshlash" tugmasini bosing.</p>
+            <p>2. Kamerani detal yorlig'idagi QR yoki Barkodga qarating.</p>
+            <p>3. Dastur chizma, video va furnituralarni ko'rsatadi.</p>
+            <label>
+                <input type="checkbox" id="dont-show-again"> Boshqa ko'rsatilmasin
+            </label>
+            <button class="btn btn-primary" onclick="closeInstructions()">Tushunarli</button>
+        </div>
+    </div>
+
     <div id="app">
-        <header>
-            <h1>Yig'ish Tizimi</h1>
-        </header>
+        <header><h1>Yig'ish Bo'limi</h1></header>
         <main>
-            <div id="reader"></div>
+            <button id="btn-start-scan" class="btn btn-primary btn-large">Skanerlashni boshlash</button>
+            
+            <div id="reader-container" class="hidden">
+                <div id="reader"></div>
+                <button class="btn btn-danger" onclick="stopScanner()">Bekor qilish</button>
+            </div>
+
             <div id="result-container" class="hidden">
-                <h2 id="modul-title"></h2>
-                <div class="actions">
-                    <button id="btn-furnitura" class="btn">Furnituralar</button>
-                    <button id="btn-pdf" class="btn hidden">Chizma</button>
-                    <button id="btn-video" class="btn hidden">Video</button>
+                <div class="result-card">
+                    <h2 id="modul-title"></h2>
+                    <div class="actions">
+                        <button id="btn-furnitura" class="btn btn-tab">Furnituralar</button>
+                        <button id="btn-pdf" class="btn btn-tab hidden">Chizma</button>
+                        <button id="btn-video" class="btn btn-tab hidden">Video</button>
+                    </div>
+                    <div id="content-area"></div>
                 </div>
-                <div id="content-area"></div>
+                <button class="btn btn-primary btn-large" style="margin-top:15px;" onclick="resetApp()">Yangi skanerlash</button>
             </div>
         </main>
     </div>
     <script src="app.js"></script>
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker muvaffaqiyatli ro\'yxatdan o\'tdi: ', registration.scope);
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker xatosi: ', err);
-                    });
-            });
-        }
-    </script>
 </body>
 </html>
