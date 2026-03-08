@@ -82,30 +82,29 @@ function enableNavs() {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('disabled'));
     document.getElementById('app-title').textContent = `Artikul: ${currentData.artikul}`;
 }
+
+// YANGILANGAN APPARAT SKANERI (Avtofokus va Kvadrat oyna)
 function startScan() {
     showPage('scanner');
     document.getElementById('app-title').textContent = "Skanerlash...";
     
-    Html5Qrcode.getCameras().then(devices => {
-        if (devices && devices.length) {
-            html5QrCode.start(
-                devices[devices.length - 1].id, 
-                { 
-                    fps: 15, 
-                    qrbox: { width: 250, height: 120 }, // Chiziqli barkod uchun to'rtburchak oyna
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.QR_CODE,
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8
-                    ]
-                }, 
-                onScanSuccess
-            ).then(() => {
-                document.getElementById('btn-torch').addEventListener('click', toggleTorch);
-            });
-        }
+    html5QrCode.start(
+        { facingMode: "environment" }, 
+        { 
+            fps: 15, 
+            qrbox: { width: 250, height: 250 },
+            useBarCodeDetectorIfSupported: true,
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8
+            ]
+        }, 
+        onScanSuccess
+    ).then(() => {
+        document.getElementById('btn-torch').addEventListener('click', toggleTorch);
     }).catch(err => alert("Kamera topilmadi yoki ruxsat yo'q!"));
 }
 
@@ -116,14 +115,13 @@ function toggleTorch() {
 }
 
 function stopScanner() {
-    html5QrCode.stop().then(() => { torchOn = false; showPage('home'); });
+    html5QrCode.stop().then(() => { torchOn = false; showPage('home'); }).catch(() => { showPage('home'); });
 }
 
 function onScanSuccess(decodedText) {
     playSuccessBeep();
-    html5QrCode.stop().then(() => { torchOn = false; fetchData(decodedText); });
+    html5QrCode.stop().then(() => { torchOn = false; fetchData(decodedText); }).catch(() => { fetchData(decodedText); });
 }
-
 function fetchData(barcode) {
     showPage('content');
     document.getElementById('dynamic-content').innerHTML = "";
@@ -144,7 +142,7 @@ function fetchData(barcode) {
             renderFurnitura();
         }).catch(err => {
             document.getElementById('skeleton-loader').classList.add('hidden');
-            let errorMsg = "Tarmoq xatosi yoki CORS! Google Sheets 'Deploy' sozlamalarini (Access: Anyone) tekshiring.";
+            let errorMsg = "Tarmoq xatosi yoki CORS! Google Sheets 'Deploy' sozlamalarini tekshiring.";
             if (!navigator.onLine) errorMsg = "Internetga ulanish yo'q!";
             
             document.getElementById('dynamic-content').innerHTML = `
@@ -161,6 +159,7 @@ function updateNavStyle(type) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`nav-${type === 'furnitura' ? 'fur' : type === 'pdf' ? 'pdf' : 'vid'}`).classList.add('active');
 }
+
 window.renderFurnitura = function() {
     if (!currentData) return;
     updateNavStyle('furnitura');
@@ -171,11 +170,14 @@ window.renderFurnitura = function() {
         html = "<p style='text-align:center; padding: 20px;'>Bu modul uchun furnitura yo'q.</p>";
     } else {
         for (let category in furs) {
+            // HIMOYA: Agar kategoriya rostdan ham bo'sh bo'lsa, chizilmaydi
+            if (!furs[category] || furs[category].length === 0) continue;
+
             html += `<div class="accordion-header" onclick="toggleAccordion(this)">${category} <span class="acc-icon">▼</span></div>`;
             html += `<div class="accordion-body open">`;
             
             furs[category].forEach((item, index) => {
-                let uid = `${currentData.artikul}_${category.replace(/\s/g, '')}_${index}`;
+                let uid = `${currentData.artikul}_${category.replace(/[^a-zA-Z0-9]/g, '')}_${index}`;
                 let isChecked = localStorage.getItem(uid) === 'true';
                 let checkClass = isChecked ? 'checked' : '';
                 
@@ -220,7 +222,6 @@ window.sortCheckedItems = function() {
         items.forEach(item => body.appendChild(item));
     });
 };
-
 window.renderIframe = function(type) {
     if (!currentData) return;
     updateNavStyle(type);
