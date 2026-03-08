@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbzbvxJhu--zsieahPiBS8-HkUaFQj4GJykOYQi9Agp-skoOHyEY30c8NYRm6Qdujcia/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzbvxJhu--zsieahPiBS8-HkUaFQj4GJykOYQi9Agp-skoOHyEY30c8NYRm6Qdujcia/exec"; // O'zingizning yangi API URL manzilingizni qo'ying
 const html5QrCode = new Html5Qrcode("reader");
 const viewportMeta = document.querySelector('meta[name="viewport"]');
 
@@ -30,7 +30,6 @@ function saveToHistory(data) {
     loadHistory();
 }
 
-// TARIXDA PDF PREVIEW (RASM) CHIZISH
 function loadHistory() {
     const list = document.getElementById('history-list');
     let history = JSON.parse(localStorage.getItem('scanHistory') || '[]');
@@ -47,7 +46,10 @@ function loadHistory() {
         return `
         <div class="history-item" onclick="loadFromHistory('${item.artikul}')">
             ${imgTag}
-            <div style="flex-grow:1;"><strong>${item.artikul}</strong></div>
+            <div style="flex-grow:1;">
+                <strong>${item.artikul}</strong><br>
+                <span style="font-size:12px; color:#27ae60; font-weight:bold;">${item.nomi || 'Nomi kiritilmagan'}</span>
+            </div>
             <span style="color:#7f8c8d; font-size:20px;">➔</span>
         </div>`;
     }).join('');
@@ -80,6 +82,7 @@ function enableNavs() {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('disabled'));
     document.getElementById('app-title').textContent = `Artikul: ${currentData.artikul}`;
 }
+
 function startScan() {
     showPage('scanner');
     document.getElementById('app-title').textContent = "Skanerlash...";
@@ -137,20 +140,67 @@ function updateNavStyle(type) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`nav-${type === 'furnitura' ? 'fur' : type === 'pdf' ? 'pdf' : 'vid'}`).classList.add('active');
 }
-
 window.renderFurnitura = function() {
     if (!currentData) return;
     updateNavStyle('furnitura');
     let html = "";
-    if (!currentData.furnituralar || currentData.furnituralar.length === 0) {
+    let furs = currentData.furnituralar;
+    
+    if (!furs || Object.keys(furs).length === 0) {
         html = "<p style='text-align:center; padding: 20px;'>Bu modul uchun furnitura yo'q.</p>";
     } else {
-        currentData.furnituralar.forEach(item => {
-            html += `<div class="fur-item"><span>${item.nomi}</span> <strong>${item.soni} ${item.ulchov}</strong></div>`;
-        });
+        // Hash Map orqali guruhlangan obyektlarni chizish
+        for (let category in furs) {
+            html += `<div class="accordion-header" onclick="toggleAccordion(this)">${category} <span class="acc-icon">▼</span></div>`;
+            html += `<div class="accordion-body open">`;
+            
+            furs[category].forEach((item, index) => {
+                let uid = `${currentData.artikul}_${category.replace(/\s/g, '')}_${index}`;
+                let isChecked = localStorage.getItem(uid) === 'true';
+                let checkClass = isChecked ? 'checked' : '';
+                
+                html += `
+                <div class="fur-item ${checkClass}" id="${uid}" onclick="toggleCheck('${uid}')">
+                    <div class="fur-details">
+                        <span class="fur-name">${item.nomi}</span>
+                        <span class="fur-size">${item.ulchov}</span>
+                    </div>
+                    <strong>${item.soni}</strong>
+                </div>`;
+            });
+            html += `</div>`;
+        }
     }
     document.getElementById('dynamic-content').innerHTML = html;
+    sortCheckedItems(); // Chizilgandan so'ng yashillarni pastga tushirish
 };
+
+window.toggleAccordion = function(el) {
+    let body = el.nextElementSibling;
+    body.classList.toggle('open');
+    let icon = el.querySelector('.acc-icon');
+    icon.textContent = body.classList.contains('open') ? '▼' : '▶';
+};
+
+window.toggleCheck = function(uid) {
+    let el = document.getElementById(uid);
+    let isChecked = el.classList.toggle('checked');
+    localStorage.setItem(uid, isChecked);
+    sortCheckedItems(); // Holat o'zgarganda avtomatik saralash
+};
+
+window.sortCheckedItems = function() {
+    document.querySelectorAll('.accordion-body').forEach(body => {
+        let items = Array.from(body.querySelectorAll('.fur-item'));
+        items.sort((a, b) => {
+            let aChk = a.classList.contains('checked') ? 1 : 0;
+            let bChk = b.classList.contains('checked') ? 1 : 0;
+            return aChk - bChk;
+        });
+        items.forEach(item => body.appendChild(item));
+    });
+};
+
 window.renderIframe = function(type) {
     if (!currentData) return;
     updateNavStyle(type);
@@ -162,7 +212,6 @@ window.renderIframe = function(type) {
     }
 
     let finalUrl = url;
-    // YOUTUBE HIMOYASI: modestbranding va rel=0 qo'shildi
     if (type === "video") {
         let vidId = "";
         if (url.includes("youtu.be/")) vidId = url.split("youtu.be/")[1].split("?")[0];
@@ -175,7 +224,6 @@ window.renderIframe = function(type) {
         }
     }
 
-    // SHAFFOF TO'SIQ HAM PDF HAM VIDEO UCHUN QO'YILADI (100% Kenglik)
     document.getElementById('dynamic-content').innerHTML = `
         <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
             <button class="btn btn-primary" style="padding:10px; font-size:14px; background:#27ae60;" onclick="openNativeFullscreen('${finalUrl}', '${type}')">⛶ To'liq ekran</button>
@@ -188,21 +236,15 @@ window.renderIframe = function(type) {
 };
 
 window.openNativeFullscreen = function(url, type) {
-    // ZOOM NI ERKIN QO'YIB YUBORISH
     if (viewportMeta) viewportMeta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes");
-    
     document.getElementById("modal-title-text").textContent = type === "pdf" ? "Chizma" : "Video";
-    const shield = document.getElementById("anti-leak-shield");
-    shield.classList.remove("hidden"); // Ikkalasida ham himoya yoqiladi
-
+    document.getElementById("anti-leak-shield").classList.remove("hidden");
     document.getElementById("iframe-container").innerHTML = `<iframe src="${url}" class="secure-iframe" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
     document.getElementById("fullscreen-modal").classList.remove("hidden");
 };
 
 window.closeNativeFullscreen = function() {
-    // ZOOM NI QAYTA BLOKLASH
     if (viewportMeta) viewportMeta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover");
-    
     document.getElementById("iframe-container").innerHTML = "";
     document.getElementById("fullscreen-modal").classList.add("hidden");
 };
