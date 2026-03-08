@@ -5,10 +5,9 @@ const viewportMeta = document.querySelector('meta[name="viewport"]');
 let currentData = null;
 let torchOn = false;
 
-// OVOZ VA TEBRANISH MANTIG'I
 function playSuccessBeep() {
     try {
-        if (navigator.vibrate) navigator.vibrate(200); // Tebranish
+        if (navigator.vibrate) navigator.vibrate(200);
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
         const gainNode = ctx.createGain();
@@ -19,10 +18,9 @@ function playSuccessBeep() {
         gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
         osc.start();
         osc.stop(ctx.currentTime + 0.15);
-    } catch (e) { console.log("Audio API xatosi", e); }
+    } catch (e) { console.log("Audio xatosi", e); }
 }
 
-// MAHALLIY TARIX (LOCAL STORAGE)
 function saveToHistory(data) {
     let history = JSON.parse(localStorage.getItem('scanHistory') || '[]');
     history = history.filter(item => item.artikul !== data.artikul);
@@ -32,6 +30,7 @@ function saveToHistory(data) {
     loadHistory();
 }
 
+// TARIXDA PDF PREVIEW (RASM) CHIZISH
 function loadHistory() {
     const list = document.getElementById('history-list');
     let history = JSON.parse(localStorage.getItem('scanHistory') || '[]');
@@ -39,12 +38,19 @@ function loadHistory() {
         list.innerHTML = "<p style='color:#7f8c8d; font-size: 14px;'>Hozircha tarix yo'q.</p>";
         return;
     }
-    list.innerHTML = history.map(item => `
+    list.innerHTML = history.map(item => {
+        let imgTag = '<div class="history-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;">PDF yo\'q</div>';
+        if (item.pdfUrl) {
+            let match = item.pdfUrl.match(/[-\w]{25,}/);
+            if (match) imgTag = `<img src="https://drive.google.com/thumbnail?id=${match[0]}&sz=w100-h100" class="history-img" alt="PDF">`;
+        }
+        return `
         <div class="history-item" onclick="loadFromHistory('${item.artikul}')">
-            <strong>${item.artikul}</strong>
+            ${imgTag}
+            <div style="flex-grow:1;"><strong>${item.artikul}</strong></div>
             <span style="color:#7f8c8d; font-size:20px;">➔</span>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 }
 
 function loadFromHistory(artikul) {
@@ -59,7 +65,6 @@ function loadFromHistory(artikul) {
 
 window.onload = loadHistory;
 
-// SAHIFALAR (PAGES) NAVIGATSIYASI
 function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${pageId}`).classList.add('active');
@@ -75,10 +80,8 @@ function enableNavs() {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('disabled'));
     document.getElementById('app-title').textContent = `Artikul: ${currentData.artikul}`;
 }
-// SKANER VA CHIROQ (TORCH) MANTIG'I
 function startScan() {
     showPage('scanner');
-    document.getElementById('nav-scan').classList.add('active');
     document.getElementById('app-title').textContent = "Skanerlash...";
     
     Html5Qrcode.getCameras().then(devices => {
@@ -97,21 +100,14 @@ function toggleTorch() {
 }
 
 function stopScanner() {
-    html5QrCode.stop().then(() => {
-        torchOn = false;
-        showPage('home');
-    });
+    html5QrCode.stop().then(() => { torchOn = false; showPage('home'); });
 }
 
 function onScanSuccess(decodedText) {
     playSuccessBeep();
-    html5QrCode.stop().then(() => {
-        torchOn = false;
-        fetchData(decodedText);
-    });
+    html5QrCode.stop().then(() => { torchOn = false; fetchData(decodedText); });
 }
 
-// API DAN MA'LUMOT OLISH VA SKELETON
 function fetchData(barcode) {
     showPage('content');
     document.getElementById('dynamic-content').innerHTML = "";
@@ -123,20 +119,19 @@ function fetchData(barcode) {
         .then(data => {
             document.getElementById('skeleton-loader').classList.add('hidden');
             if (data.error) {
-                document.getElementById('dynamic-content').innerHTML = `<h3 style="color:red; text-align:center; margin-top:20px;">${data.error}</h3>`;
+                document.getElementById('dynamic-content').innerHTML = `<h3 style="color:red; text-align:center;">${data.error}</h3>`;
                 return;
             }
             currentData = data;
             saveToHistory(data);
             enableNavs();
             renderFurnitura();
-        })
-        .catch(err => {
+        }).catch(err => {
             document.getElementById('skeleton-loader').classList.add('hidden');
-            document.getElementById('dynamic-content').innerHTML = `<h3 style="color:red; text-align:center; margin-top:20px;">Internet xatoligi!</h3>`;
+            document.getElementById('dynamic-content').innerHTML = `<h3 style="color:red; text-align:center;">Internet xatoligi!</h3>`;
         });
 }
-// FURNITURA VA MEDIA RENDERI
+
 function updateNavStyle(type) {
     showPage('content');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -156,7 +151,6 @@ window.renderFurnitura = function() {
     }
     document.getElementById('dynamic-content').innerHTML = html;
 };
-
 window.renderIframe = function(type) {
     if (!currentData) return;
     updateNavStyle(type);
@@ -168,9 +162,12 @@ window.renderIframe = function(type) {
     }
 
     let finalUrl = url;
+    // YOUTUBE HIMOYASI: modestbranding va rel=0 qo'shildi
     if (type === "video") {
-        if (url.includes("youtu.be/")) finalUrl = `https://www.youtube.com/embed/${url.split("youtu.be/")[1].split("?")[0]}`;
-        else if (url.includes("youtube.com/watch")) finalUrl = `https://www.youtube.com/embed/${new URL(url).searchParams.get("v")}`;
+        let vidId = "";
+        if (url.includes("youtu.be/")) vidId = url.split("youtu.be/")[1].split("?")[0];
+        else if (url.includes("youtube.com/watch")) vidId = new URL(url).searchParams.get("v");
+        finalUrl = `https://www.youtube.com/embed/${vidId}?modestbranding=1&rel=0&controls=1`;
     } else if (type === "pdf") {
         let fileIdMatch = url.match(/[-\w]{25,}/);
         if (fileIdMatch) {
@@ -178,31 +175,34 @@ window.renderIframe = function(type) {
         }
     }
 
+    // SHAFFOF TO'SIQ HAM PDF HAM VIDEO UCHUN QO'YILADI (100% Kenglik)
     document.getElementById('dynamic-content').innerHTML = `
         <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
             <button class="btn btn-primary" style="padding:10px; font-size:14px; background:#27ae60;" onclick="openNativeFullscreen('${finalUrl}', '${type}')">⛶ To'liq ekran</button>
         </div>
         <div class="iframe-wrapper">
-            ${type === "pdf" ? '<div class="anti-leak-shield"></div>' : ''}
+            <div class="anti-leak-shield"></div>
             <iframe src="${finalUrl}" class="secure-iframe" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
         </div>
     `;
 };
 
-// FULLSCREEN VA ZOOM DINAMIKASI
 window.openNativeFullscreen = function(url, type) {
+    // ZOOM NI ERKIN QO'YIB YUBORISH
     if (viewportMeta) viewportMeta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes");
     
     document.getElementById("modal-title-text").textContent = type === "pdf" ? "Chizma" : "Video";
     const shield = document.getElementById("anti-leak-shield");
-    if (type === "pdf") shield.classList.remove("hidden"); else shield.classList.add("hidden");
+    shield.classList.remove("hidden"); // Ikkalasida ham himoya yoqiladi
 
     document.getElementById("iframe-container").innerHTML = `<iframe src="${url}" class="secure-iframe" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
     document.getElementById("fullscreen-modal").classList.remove("hidden");
 };
 
 window.closeNativeFullscreen = function() {
+    // ZOOM NI QAYTA BLOKLASH
     if (viewportMeta) viewportMeta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover");
+    
     document.getElementById("iframe-container").innerHTML = "";
     document.getElementById("fullscreen-modal").classList.add("hidden");
 };
