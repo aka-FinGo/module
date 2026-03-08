@@ -82,8 +82,6 @@ function enableNavs() {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('disabled'));
     document.getElementById('app-title').textContent = `Artikul: ${currentData.artikul}`;
 }
-
-// YANGILANGAN APPARAT SKANERI (Avtofokus va Kvadrat oyna)
 function startScan() {
     showPage('scanner');
     document.getElementById('app-title').textContent = "Skanerlash...";
@@ -122,6 +120,7 @@ function onScanSuccess(decodedText) {
     playSuccessBeep();
     html5QrCode.stop().then(() => { torchOn = false; fetchData(decodedText); }).catch(() => { fetchData(decodedText); });
 }
+
 function fetchData(barcode) {
     showPage('content');
     document.getElementById('dynamic-content').innerHTML = "";
@@ -159,7 +158,6 @@ function updateNavStyle(type) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`nav-${type === 'furnitura' ? 'fur' : type === 'pdf' ? 'pdf' : 'vid'}`).classList.add('active');
 }
-
 window.renderFurnitura = function() {
     if (!currentData) return;
     updateNavStyle('furnitura');
@@ -170,11 +168,11 @@ window.renderFurnitura = function() {
         html = "<p style='text-align:center; padding: 20px;'>Bu modul uchun furnitura yo'q.</p>";
     } else {
         for (let category in furs) {
-            // HIMOYA: Agar kategoriya rostdan ham bo'sh bo'lsa, chizilmaydi
             if (!furs[category] || furs[category].length === 0) continue;
 
-            html += `<div class="accordion-header" onclick="toggleAccordion(this)">${category} <span class="acc-icon">▼</span></div>`;
-            html += `<div class="accordion-body open">`;
+            // Barchasi yopiq (▶) va open klassisiz boshlanadi
+            html += `<div class="accordion-header" onclick="toggleAccordion(this)">${category} <span class="acc-icon">▶</span></div>`;
+            html += `<div class="accordion-body">`; 
             
             furs[category].forEach((item, index) => {
                 let uid = `${currentData.artikul}_${category.replace(/[^a-zA-Z0-9]/g, '')}_${index}`;
@@ -192,6 +190,8 @@ window.renderFurnitura = function() {
             });
             html += `</div>`;
         }
+        // Pastda qolib ketmasligi uchun jismoniy bufer (Spacer)
+        html += `<div style="height: 150px; width: 100%; pointer-events: none;"></div>`;
     }
     document.getElementById('dynamic-content').innerHTML = html;
     sortCheckedItems();
@@ -199,9 +199,18 @@ window.renderFurnitura = function() {
 
 window.toggleAccordion = function(el) {
     let body = el.nextElementSibling;
-    body.classList.toggle('open');
     let icon = el.querySelector('.acc-icon');
-    icon.textContent = body.classList.contains('open') ? '▼' : '▶';
+    let isOpen = body.classList.contains('open');
+
+    // Avval hamma Accordion larni yopish (Exclusive mantig'i)
+    document.querySelectorAll('.accordion-body').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.acc-icon').forEach(i => i.textContent = '▶');
+
+    // Agar hozir bosilgan guruh yopiq bo'lgan bo'lsa, uni ochish
+    if (!isOpen) {
+        body.classList.add('open');
+        icon.textContent = '▼';
+    }
 };
 
 window.toggleCheck = function(uid) {
