@@ -82,18 +82,31 @@ function enableNavs() {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('disabled'));
     document.getElementById('app-title').textContent = `Artikul: ${currentData.artikul}`;
 }
-
 function startScan() {
     showPage('scanner');
     document.getElementById('app-title').textContent = "Skanerlash...";
     
     Html5Qrcode.getCameras().then(devices => {
         if (devices && devices.length) {
-            html5QrCode.start(devices[devices.length - 1].id, { fps: 15, qrbox: 250 }, onScanSuccess).then(() => {
+            html5QrCode.start(
+                devices[devices.length - 1].id, 
+                { 
+                    fps: 15, 
+                    qrbox: { width: 250, height: 120 }, // Chiziqli barkod uchun to'rtburchak oyna
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8
+                    ]
+                }, 
+                onScanSuccess
+            ).then(() => {
                 document.getElementById('btn-torch').addEventListener('click', toggleTorch);
             });
         }
-    }).catch(err => alert("Kamera topilmadi!"));
+    }).catch(err => alert("Kamera topilmadi yoki ruxsat yo'q!"));
 }
 
 function toggleTorch() {
@@ -110,12 +123,11 @@ function onScanSuccess(decodedText) {
     playSuccessBeep();
     html5QrCode.stop().then(() => { torchOn = false; fetchData(decodedText); });
 }
+
 function fetchData(barcode) {
     showPage('content');
     document.getElementById('dynamic-content').innerHTML = "";
     document.getElementById('skeleton-loader').classList.remove('hidden');
-    
-    // DEBUG: Skaner nima o'qiganini ekranda yuqoriga chiqaradi
     document.getElementById('app-title').textContent = `Qidirish: [${barcode}]`;
     
     fetch(`${API_URL}?barcode=${encodeURIComponent(barcode)}`)
@@ -132,7 +144,15 @@ function fetchData(barcode) {
             renderFurnitura();
         }).catch(err => {
             document.getElementById('skeleton-loader').classList.add('hidden');
-            document.getElementById('dynamic-content').innerHTML = `<h3 style="color:red; text-align:center;">Internet xatoligi!</h3>`;
+            let errorMsg = "Tarmoq xatosi yoki CORS! Google Sheets 'Deploy' sozlamalarini (Access: Anyone) tekshiring.";
+            if (!navigator.onLine) errorMsg = "Internetga ulanish yo'q!";
+            
+            document.getElementById('dynamic-content').innerHTML = `
+                <div style="padding: 20px; text-align: center;">
+                    <h3 style="color:red;">${errorMsg}</h3>
+                    <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">Texnik xato: ${err.message}</p>
+                </div>
+            `;
         });
 }
 
@@ -141,7 +161,6 @@ function updateNavStyle(type) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`nav-${type === 'furnitura' ? 'fur' : type === 'pdf' ? 'pdf' : 'vid'}`).classList.add('active');
 }
-
 window.renderFurnitura = function() {
     if (!currentData) return;
     updateNavStyle('furnitura');
@@ -201,6 +220,7 @@ window.sortCheckedItems = function() {
         items.forEach(item => body.appendChild(item));
     });
 };
+
 window.renderIframe = function(type) {
     if (!currentData) return;
     updateNavStyle(type);
