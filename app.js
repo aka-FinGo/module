@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbzbvxJhu--zsieahPiBS8-HkUaFQj4GJykOYQi9Agp-skoOHyEY30c8NYRm6Qdujcia/exec"; // O'zingizning yangi API URL manzilingizni qo'ying
+const API_URL = "https://script.google.com/macros/s/AKfycbxyWSaRdn-4NZkkwJiAb2Q-uezsE8U_iFhjdSfsd4vZRHodaQ-aLhMNZe9ZwqjdVMjQ/exec"; 
 const html5QrCode = new Html5Qrcode("reader");
 const viewportMeta = document.querySelector('meta[name="viewport"]');
 
@@ -110,19 +110,20 @@ function onScanSuccess(decodedText) {
     playSuccessBeep();
     html5QrCode.stop().then(() => { torchOn = false; fetchData(decodedText); });
 }
-
 function fetchData(barcode) {
     showPage('content');
     document.getElementById('dynamic-content').innerHTML = "";
     document.getElementById('skeleton-loader').classList.remove('hidden');
-    document.getElementById('app-title').textContent = "Qidirilmoqda...";
+    
+    // DEBUG: Skaner nima o'qiganini ekranda yuqoriga chiqaradi
+    document.getElementById('app-title').textContent = `Qidirish: [${barcode}]`;
     
     fetch(`${API_URL}?barcode=${encodeURIComponent(barcode)}`)
         .then(res => res.json())
         .then(data => {
             document.getElementById('skeleton-loader').classList.add('hidden');
             if (data.error) {
-                document.getElementById('dynamic-content').innerHTML = `<h3 style="color:red; text-align:center;">${data.error}</h3>`;
+                document.getElementById('dynamic-content').innerHTML = `<h3 style="color:red; text-align:center; padding:20px;">${data.error}</h3>`;
                 return;
             }
             currentData = data;
@@ -140,6 +141,7 @@ function updateNavStyle(type) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`nav-${type === 'furnitura' ? 'fur' : type === 'pdf' ? 'pdf' : 'vid'}`).classList.add('active');
 }
+
 window.renderFurnitura = function() {
     if (!currentData) return;
     updateNavStyle('furnitura');
@@ -149,7 +151,6 @@ window.renderFurnitura = function() {
     if (!furs || Object.keys(furs).length === 0) {
         html = "<p style='text-align:center; padding: 20px;'>Bu modul uchun furnitura yo'q.</p>";
     } else {
-        // Hash Map orqali guruhlangan obyektlarni chizish
         for (let category in furs) {
             html += `<div class="accordion-header" onclick="toggleAccordion(this)">${category} <span class="acc-icon">▼</span></div>`;
             html += `<div class="accordion-body open">`;
@@ -172,7 +173,7 @@ window.renderFurnitura = function() {
         }
     }
     document.getElementById('dynamic-content').innerHTML = html;
-    sortCheckedItems(); // Chizilgandan so'ng yashillarni pastga tushirish
+    sortCheckedItems();
 };
 
 window.toggleAccordion = function(el) {
@@ -186,7 +187,7 @@ window.toggleCheck = function(uid) {
     let el = document.getElementById(uid);
     let isChecked = el.classList.toggle('checked');
     localStorage.setItem(uid, isChecked);
-    sortCheckedItems(); // Holat o'zgarganda avtomatik saralash
+    sortCheckedItems();
 };
 
 window.sortCheckedItems = function() {
@@ -200,7 +201,6 @@ window.sortCheckedItems = function() {
         items.forEach(item => body.appendChild(item));
     });
 };
-
 window.renderIframe = function(type) {
     if (!currentData) return;
     updateNavStyle(type);
