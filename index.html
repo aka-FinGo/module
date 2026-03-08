@@ -2,43 +2,72 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aristokrat Yig'ish</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Aristokrat Mebel</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c3e50">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
-    <div id="app">
-        <header><h1>Aristokrat Yig'ish</h1></header>
-        <main>
-            <button id="btn-start-scan" class="btn btn-primary btn-large">Skanerlashni boshlash</button>
-            
-            <div id="reader-container" class="hidden">
-                <div id="reader"></div>
-                <button class="btn btn-danger btn-large mt-10" onclick="stopScanner()">Bekor qilish</button>
-            </div>
+    <header class="app-bar">
+        <div class="header-content">
+            <h2 id="app-title">Aristokrat Mebel</h2>
+        </div>
+    </header>
 
-            <div id="result-container" class="hidden">
-                <div class="result-card">
-                    <h2 id="modul-title"></h2>
-                    <div class="actions">
-                        <button id="btn-furnitura" class="btn btn-tab active">Furnitura</button>
-                        <button id="btn-pdf" class="btn btn-tab btn-media hidden">Chizma</button>
-                        <button id="btn-video" class="btn btn-tab btn-media hidden">Video</button>
-                    </div>
-                    <div id="content-area" class="scrollable"></div>
-                </div>
-                <button class="btn btn-primary btn-large mt-10" onclick="resetApp()">Yangi skanerlash</button>
+    <main id="main-container">
+        <section id="page-home" class="page active">
+            <div class="hero-card">
+                <h3>Xush kelibsiz!</h3>
+                <p>Modulni yig'ishni boshlash uchun skanerlang.</p>
             </div>
-        </main>
-    </div>
+            <div id="history-container" class="mt-10">
+                <h3>Oxirgi ko'rilganlar:</h3>
+                <div id="history-list"></div>
+            </div>
+        </section>
+
+        <section id="page-scanner" class="page">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <button id="btn-torch" class="btn btn-primary" style="width: 48%;">🔦 Chiroq</button>
+                <button class="btn btn-danger" style="width: 48%;" onclick="stopScanner()">Bekor qilish</button>
+            </div>
+            <div id="reader-container"><div id="reader"></div></div>
+        </section>
+
+        <section id="page-content" class="page">
+            <div id="skeleton-loader" class="hidden">
+                <div class="skeleton skeleton-text"></div>
+                <div class="skeleton skeleton-text"></div>
+                <div class="skeleton skeleton-text" style="width: 70%;"></div>
+            </div>
+            <div id="dynamic-content" class="scrollable"></div>
+        </section>
+    </main>
+
+    <footer class="bottom-nav">
+        <button class="nav-item active" onclick="showPage('home')" id="nav-home">
+            <span class="icon">🏠</span><span class="label">Asosiy</span>
+        </button>
+        <button class="nav-item" onclick="startScan()" id="nav-scan">
+            <span class="icon" style="font-size: 28px; color: #27ae60;">📷</span><span class="label">Skaner</span>
+        </button>
+        <button class="nav-item disabled" onclick="renderFurnitura()" id="nav-fur">
+            <span class="icon">📦</span><span class="label">Furnitura</span>
+        </button>
+        <button class="nav-item disabled" onclick="renderIframe('pdf')" id="nav-pdf">
+            <span class="icon">📐</span><span class="label">Chizma</span>
+        </button>
+        <button class="nav-item disabled" onclick="renderIframe('video')" id="nav-vid">
+            <span class="icon">🎬</span><span class="label">Video</span>
+        </button>
+    </footer>
 
     <div id="fullscreen-modal" class="hidden">
         <div class="modal-header">
             <h3 id="modal-title-text">Hujjat</h3>
-            <button class="btn btn-danger" onclick="closeFullscreen()">Yopish (X)</button>
+            <button class="btn btn-danger" onclick="closeNativeFullscreen()">Yopish (X)</button>
         </div>
         <div id="modal-body">
             <div id="anti-leak-shield" class="hidden"></div>
