@@ -13,6 +13,7 @@
     <header class="app-bar">
         <div class="header-content">
             <h2 id="app-title">Aristokrat Mebel</h2>
+            <button class="btn btn-admin" onclick="openAdminPanel()">Admin</button>
         </div>
     </header>
 
@@ -21,6 +22,7 @@
             <div class="hero-card">
                 <h3>Xush kelibsiz!</h3>
                 <p>Modulni yig'ishni boshlash uchun skanerlang.</p>
+                <p style="margin-top: 10px; font-size: 13px; color: #7f8c8d;">Agar internet bo'lmasa, Admin paneldan qo'shilgan modullar ishlayveradi.</p>
             </div>
             <div id="history-container" class="mt-10">
                 <h3>Oxirgi ko'rilganlar:</h3>
@@ -44,6 +46,30 @@
             </div>
             <div id="dynamic-content" class="scrollable"></div>
         </section>
+
+        <section id="page-admin" class="page">
+            <div class="admin-card">
+                <h3>Modul qo'shish / tahrirlash</h3>
+                <div class="admin-grid">
+                    <input id="admin-artikul" class="input" placeholder="Artikul / barcode" />
+                    <input id="admin-nomi" class="input" placeholder="Modul nomi" />
+                    <input id="admin-pdf" class="input" placeholder="PDF URL (ixtiyoriy)" />
+                    <input id="admin-video" class="input" placeholder="Video URL (ixtiyoriy)" />
+                    <textarea id="admin-furnitura" class="input" rows="8" placeholder="Furnitura satrlari:\nKategoriya|Nomi|O'lchov|Soni\nMasalan:\nKorpus|Shurup 4x30|4x30 mm|16"></textarea>
+                </div>
+                <div class="admin-actions">
+                    <button class="btn btn-primary" onclick="saveAdminModule()">Saqlash</button>
+                    <button class="btn" onclick="clearAdminForm()">Tozalash</button>
+                    <button class="btn btn-danger" onclick="showPage('home')">Yopish</button>
+                </div>
+                <p id="admin-status" class="admin-status"></p>
+            </div>
+
+            <div class="admin-card mt-10">
+                <h3>Saqlangan modullar</h3>
+                <div id="admin-module-list"></div>
+            </div>
+        </section>
     </main>
 
     <footer class="bottom-nav">
@@ -53,7 +79,7 @@
         <button class="nav-item disabled" onclick="renderFurnitura()" id="nav-fur">
             <span class="icon">📦</span><span class="label">Furnitura</span>
         </button>
-        
+
         <div class="fab-wrapper">
             <button class="fab-button" onclick="startScan()" id="nav-scan">
                 <span class="icon">📷</span>
