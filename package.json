@@ -1,7 +1,6 @@
 {
-  "name": "kitchen-planner-clone",
-  "version": "0.1.0",
-  "private": true,
+  "name": "kitchen-constructor",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,9 +8,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "three": "^0.181.1"
+    "@supabase/supabase-js": "^2.43.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
   },
   "devDependencies": {
-    "vite": "^7.1.12"
+    "@vitejs/plugin-react": "^4.3.0",
+    "vite": "^5.2.0"
   }
 }
