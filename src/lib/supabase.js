@@ -7,7 +7,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('⚠️  Supabase env variables topilmadi! .env faylini tekshiring.')
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+export const supabase = createClient(
+  SUPABASE_URL      || 'https://placeholder.supabase.co',
+  SUPABASE_ANON_KEY || 'placeholder-key'
+)
 
 // Jadval nomlari — boshqa loyihalar bilan adashmaylik
 export const TABLES = {
