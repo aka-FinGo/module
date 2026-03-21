@@ -8,3 +8,9 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+// Jadval nomlari — boshqa loyihalar bilan adashmaylik
+export const TABLES = {
+  modules: 'm_modules',
+  orders:  'm_orders',
+}
