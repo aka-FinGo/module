@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kitchen Planner Clone</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside class="sidebar">
+        <h1>Kitchen Planner</h1>
+        <p class="subtitle">Admin panel + 3D sahna</p>
+
+        <section class="panel">
+          <h2>Admin panel</h2>
+          <label>
+            Modul nomi
+            <input id="moduleName" placeholder="Masalan: Pastki shkaf 60" />
+          </label>
+          <label>
+            Narxi (USD)
+            <input id="modulePrice" type="number" min="0" step="1" placeholder="250" />
+          </label>
+          <label>
+            O'lcham W,H,D (sm)
+            <div class="row-3">
+              <input id="moduleW" type="number" min="20" value="60" />
+              <input id="moduleH" type="number" min="20" value="72" />
+              <input id="moduleD" type="number" min="20" value="60" />
+            </div>
+          </label>
+          <label>
+            Rang
+            <input id="moduleColor" type="color" value="#d6b68a" />
+          </label>
+          <label>
+            Furnitura (vergul bilan)
+            <textarea id="moduleHardware" rows="2" placeholder="ilgak, rels, tutqich"></textarea>
+          </label>
+          <button id="addModuleBtn">Modulni katalogga qo'shish</button>
+        </section>
+
+        <section class="panel">
+          <h2>Modullar katalogi</h2>
+          <ul id="catalogList"></ul>
+        </section>
+
+        <section class="panel total-panel">
+          <h2>Smetasi</h2>
+          <div id="sceneItems"></div>
+          <div class="total">Jami: <strong id="totalPrice">$0</strong></div>
+          <button id="clearSceneBtn" class="danger">Sahnani tozalash</button>
+        </section>
+      </aside>
+
+      <main>
+        <canvas id="sceneCanvas"></canvas>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
