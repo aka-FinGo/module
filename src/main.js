@@ -2,90 +2,173 @@ import './styles.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-const STORAGE_KEY = 'kitchen_module_templates_v2';
+const STORAGE_KEY = 'kitchen_templates_v3';
+
+const DEFAULT_TEMPLATES = [
+  {
+    id: crypto.randomUUID(),
+    category: 'Pastki seksiyalar',
+    name: 'Pastki modul 600',
+    width: 60,
+    height: 72,
+    depth: 60,
+    price: 1200000,
+    furniture: [
+      { name: 'Shurup 4x30', qty: 20 },
+      { name: 'Ruchka', qty: 1 }
+    ],
+    color: '#b7beca'
+  },
+  {
+    id: crypto.randomUUID(),
+    category: 'Pastki seksiyalar',
+    name: 'Pastki modul 800',
+    width: 80,
+    height: 72,
+    depth: 60,
+    price: 1450000,
+    furniture: [
+      { name: 'Shurup 4x30', qty: 24 },
+      { name: 'Ruchka', qty: 2 }
+    ],
+    color: '#aeb8c6'
+  },
+  {
+    id: crypto.randomUUID(),
+    category: 'Yuqori seksiyalar',
+    name: 'Yuqori modul 600',
+    width: 60,
+    height: 72,
+    depth: 35,
+    price: 980000,
+    furniture: [
+      { name: 'Shurup 4x30', qty: 14 },
+      { name: 'Petlya', qty: 2 }
+    ],
+    color: '#c7ccd6'
+  }
+];
 
 const app = document.getElementById('app');
 app.innerHTML = `
-  <div class="layout">
-    <aside class="panel">
-      <h1>Admin panel</h1>
-      <p class="muted">Modul qo'shing, keyin sahnaga joylashtiring.</p>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="toolbar-group">
+        <button id="toggle-admin" class="tool-btn">⚙️ Admin</button>
+        <button id="reset-scene" class="tool-btn">♻️ Tozalash</button>
+      </div>
+      <div class="toolbar-title">Kitchen Planner Clone</div>
+      <div class="toolbar-group right">
+        <div class="price-pill">Jami: <strong id="total-price">0 so'm</strong></div>
+      </div>
+    </header>
 
-      <form id="module-form" class="card">
-        <h2>Yangi modul</h2>
+    <div class="workspace">
+      <aside class="sidebar">
+        <nav class="menu-block">
+          <h3>Katalog</h3>
+          <div id="category-list" class="category-list"></div>
+        </nav>
+
+        <section class="menu-block">
+          <h3>Modullar</h3>
+          <div id="catalog-list" class="catalog-list"></div>
+        </section>
+      </aside>
+
+      <main class="scene-panel">
+        <div id="scene"></div>
+        <section class="floating-summary">
+          <h4>Sahnadagi modullar</h4>
+          <div id="placed-list" class="mini-list"></div>
+          <h4>Furnitura jami</h4>
+          <div id="furniture-totals" class="mini-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="admin-drawer" class="admin-drawer hidden">
+      <div class="admin-header">
+        <h3>Admin panel</h3>
+        <button id="close-admin" class="tool-btn">✕</button>
+      </div>
+      <form id="module-form" class="admin-form">
+        <input id="m-category" placeholder="Kategoriya (masalan: Pastki seksiyalar)" required />
         <input id="m-name" placeholder="Modul nomi" required />
-        <div class="grid-2">
-          <input id="m-width" type="number" min="20" value="60" placeholder="Eni (sm)" required />
-          <input id="m-height" type="number" min="20" value="72" placeholder="Boyi (sm)" required />
+        <div class="inline-3">
+          <input id="m-width" type="number" min="20" placeholder="Eni" required />
+          <input id="m-height" type="number" min="20" placeholder="Boyi" required />
+          <input id="m-depth" type="number" min="20" placeholder="Chuqurlik" required />
         </div>
-        <div class="grid-2">
-          <input id="m-depth" type="number" min="20" value="60" placeholder="Chuqurligi (sm)" required />
-          <input id="m-price" type="number" min="0" value="100" placeholder="Narxi" required />
-        </div>
+        <input id="m-price" type="number" min="0" placeholder="Narxi" required />
         <textarea id="m-furniture" rows="5" placeholder="Furnitura: Nomi|Soni\nMasalan:\nShurup 4x30|20\nRuchka|2"></textarea>
-        <button type="submit">Saqlash</button>
+        <button type="submit">Modulni saqlash</button>
       </form>
-
-      <section class="card">
-        <h2>Modullar</h2>
-        <div id="template-list" class="stack"></div>
-      </section>
-    </aside>
-
-    <main class="scene-wrap">
-      <div id="scene"></div>
-      <section class="summary card">
-        <h2>Loyiha</h2>
-        <p><strong>Jami narx:</strong> <span id="total-price">0</span></p>
-        <div id="placed-list" class="stack small"></div>
-        <h3>Jami furnitura</h3>
-        <div id="furniture-totals" class="stack small"></div>
-      </section>
-    </main>
+      <div id="admin-template-list" class="mini-list"></div>
+    </div>
   </div>
 `;
 
-const form = document.getElementById('module-form');
-const listEl = document.getElementById('template-list');
-const placedListEl = document.getElementById('placed-list');
-const totalPriceEl = document.getElementById('total-price');
-const furnitureTotalsEl = document.getElementById('furniture-totals');
+const elements = {
+  categoryList: document.getElementById('category-list'),
+  catalogList: document.getElementById('catalog-list'),
+  placedList: document.getElementById('placed-list'),
+  furnitureTotals: document.getElementById('furniture-totals'),
+  totalPrice: document.getElementById('total-price'),
+  adminList: document.getElementById('admin-template-list'),
+  drawer: document.getElementById('admin-drawer')
+};
 
 let templates = loadTemplates();
+if (!templates.length) {
+  templates = DEFAULT_TEMPLATES;
+  saveTemplates();
+}
+let currentCategory = templates[0]?.category || '';
 let placedModules = [];
 
-const sceneContainer = document.getElementById('scene');
+const sceneRoot = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
-sceneContainer.appendChild(renderer.domElement);
+sceneRoot.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf4f6f8);
+scene.background = new THREE.Color(0xf4f4f2);
 
-const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000);
-camera.position.set(4, 3, 8);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+camera.position.set(3.5, 3, 6.5);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0.8, 0);
+controls.target.set(0, 1.1, 0);
 controls.enableDamping = true;
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-dir.position.set(4, 8, 3);
-scene.add(dir);
-
-const grid = new THREE.GridHelper(20, 40, 0xbfc7d1, 0xdbe1e8);
-scene.add(grid);
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
+keyLight.position.set(5, 9, 4);
+scene.add(keyLight);
 
 const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(20, 20),
-  new THREE.MeshStandardMaterial({ color: 0xfafafa })
+  new THREE.PlaneGeometry(12, 12),
+  new THREE.MeshStandardMaterial({ color: 0xe8e8e8 })
 );
 floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
+const wallMat = new THREE.MeshStandardMaterial({ color: 0xf7f7f7 });
+const backWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 4), wallMat);
+backWall.position.set(0, 2, -6);
+scene.add(backWall);
+
+const sideWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 4), wallMat);
+sideWall.rotation.y = Math.PI / 2;
+sideWall.position.set(-6, 2, 0);
+scene.add(sideWall);
+
+const grid = new THREE.GridHelper(12, 24, 0x9aa1a8, 0xc8ced5);
+scene.add(grid);
+
 function resize() {
-  const { clientWidth, clientHeight } = sceneContainer;
+  const { clientWidth, clientHeight } = sceneRoot;
   renderer.setSize(clientWidth, clientHeight);
   camera.aspect = clientWidth / clientHeight;
   camera.updateProjectionMatrix();
@@ -93,12 +176,11 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-function animate() {
+(function animate() {
   controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
-}
-animate();
+})();
 
 function loadTemplates() {
   return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -108,151 +190,207 @@ function saveTemplates() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
 }
 
-function parseFurniture(text) {
-  return text
+function parseFurniture(raw) {
+  return raw
     .split('\n')
-    .map((row) => row.trim())
+    .map((x) => x.trim())
     .filter(Boolean)
     .map((line) => {
-      const [name, qty] = line.split('|').map((x) => x?.trim());
+      const [name, qty] = line.split('|').map((v) => v?.trim());
       return { name, qty: Number(qty || 1) };
     })
     .filter((x) => x.name);
 }
 
-function renderTemplates() {
-  if (!templates.length) {
-    listEl.innerHTML = '<p class="muted">Hozircha modul yo\'q.</p>';
+function formatMoney(value) {
+  return `${new Intl.NumberFormat('uz-UZ').format(value)} so'm`;
+}
+
+function renderCategories() {
+  const categories = [...new Set(templates.map((t) => t.category))];
+  if (!categories.includes(currentCategory)) currentCategory = categories[0] || '';
+
+  elements.categoryList.innerHTML = categories
+    .map(
+      (cat) => `<button class="cat-btn ${cat === currentCategory ? 'active' : ''}" data-cat="${cat}">${cat}</button>`
+    )
+    .join('');
+}
+
+function renderCatalog() {
+  const list = templates.filter((t) => t.category === currentCategory);
+  if (!list.length) {
+    elements.catalogList.innerHTML = `<p class="muted">Bu kategoriyada modul yo'q.</p>`;
     return;
   }
 
-  listEl.innerHTML = templates
+  elements.catalogList.innerHTML = list
     .map(
       (t) => `
-        <article class="template-item">
+        <article class="catalog-item">
+          <div class="thumb" style="background:${t.color}"></div>
           <div>
             <strong>${t.name}</strong>
-            <p>${t.width}x${t.height}x${t.depth} sm · ${formatPrice(t.price)}</p>
+            <p>${t.width}x${t.height}x${t.depth} sm</p>
+            <p>Narx: ${formatMoney(t.price)}</p>
           </div>
-          <div class="row">
-            <button data-add="${t.id}">Sahnaga qo'shish</button>
-            <button data-del="${t.id}" class="danger">O'chirish</button>
-          </div>
+          <button data-add="${t.id}" class="tool-btn">+ Qo'shish</button>
         </article>
       `
     )
     .join('');
 }
 
-function formatPrice(value) {
-  return new Intl.NumberFormat('uz-UZ').format(value) + ' so\'m';
+function renderAdminList() {
+  elements.adminList.innerHTML = templates
+    .map(
+      (t) => `
+        <div class="mini-row">
+          <div>
+            <strong>${t.name}</strong>
+            <p>${t.category} · ${formatMoney(t.price)}</p>
+          </div>
+          <button class="danger" data-del-template="${t.id}">O'chirish</button>
+        </div>
+      `
+    )
+    .join('');
 }
 
 function addToScene(templateId) {
-  const t = templates.find((x) => x.id === templateId);
+  const t = templates.find((item) => item.id === templateId);
   if (!t) return;
 
-  const geometry = new THREE.BoxGeometry(t.width / 100, t.height / 100, t.depth / 100);
-  const material = new THREE.MeshStandardMaterial({ color: t.color });
-  const mesh = new THREE.Mesh(geometry, material);
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(t.width / 100, t.height / 100, t.depth / 100),
+    new THREE.MeshStandardMaterial({ color: t.color })
+  );
 
-  const nextX = placedModules.length ? placedModules[placedModules.length - 1].x + 0.9 : 0;
-  mesh.position.set(nextX, t.height / 200, 0);
+  const x = placedModules.length * 0.9 - 2.7;
+  mesh.position.set(x, t.height / 200, -5.6 + t.depth / 200);
   scene.add(mesh);
 
   placedModules.push({
     id: crypto.randomUUID(),
-    templateId: t.id,
     name: t.name,
     price: t.price,
     furniture: t.furniture,
-    mesh,
-    x: nextX
+    mesh
   });
 
-  renderProjectSummary();
+  renderProject();
 }
 
 function removePlaced(id) {
-  const index = placedModules.findIndex((x) => x.id === id);
-  if (index === -1) return;
-  scene.remove(placedModules[index].mesh);
-  placedModules.splice(index, 1);
+  const idx = placedModules.findIndex((m) => m.id === id);
+  if (idx === -1) return;
+  scene.remove(placedModules[idx].mesh);
+  placedModules.splice(idx, 1);
   placedModules.forEach((m, i) => {
-    m.x = i * 0.9;
-    m.mesh.position.x = m.x;
+    m.mesh.position.x = i * 0.9 - 2.7;
   });
-  renderProjectSummary();
+  renderProject();
 }
 
-function renderProjectSummary() {
-  const total = placedModules.reduce((acc, x) => acc + x.price, 0);
-  totalPriceEl.textContent = formatPrice(total);
+function renderProject() {
+  const total = placedModules.reduce((sum, x) => sum + x.price, 0);
+  elements.totalPrice.textContent = formatMoney(total);
 
-  if (!placedModules.length) {
-    placedListEl.innerHTML = '<p class="muted">Sahnaga modul qo\'shilmagan.</p>';
-    furnitureTotalsEl.innerHTML = '<p class="muted">Furnitura yo\'q.</p>';
-    return;
-  }
+  elements.placedList.innerHTML = placedModules.length
+    ? placedModules
+        .map(
+          (m) => `
+          <div class="mini-row">
+            <span>${m.name} · ${formatMoney(m.price)}</span>
+            <button class="danger" data-remove="${m.id}">x</button>
+          </div>
+        `
+        )
+        .join('')
+    : `<p class="muted">Sahnada modul yo'q.</p>`;
 
-  placedListEl.innerHTML = placedModules
-    .map(
-      (m) => `
-      <div class="placed-item">
-        <span>${m.name} · ${formatPrice(m.price)}</span>
-        <button data-remove="${m.id}" class="danger">olib tashlash</button>
-      </div>
-    `
-    )
-    .join('');
-
-  const totals = new Map();
-  for (const m of placedModules) {
-    for (const f of m.furniture) {
-      totals.set(f.name, (totals.get(f.name) || 0) + Number(f.qty));
+  const fTotals = new Map();
+  for (const module of placedModules) {
+    for (const f of module.furniture) {
+      fTotals.set(f.name, (fTotals.get(f.name) || 0) + Number(f.qty));
     }
   }
 
-  furnitureTotalsEl.innerHTML = Array.from(totals.entries())
-    .map(([name, qty]) => `<div class="placed-item"><span>${name}</span><strong>x${qty}</strong></div>`)
-    .join('');
+  elements.furnitureTotals.innerHTML = fTotals.size
+    ? [...fTotals.entries()]
+        .map(([name, qty]) => `<div class="mini-row"><span>${name}</span><strong>x${qty}</strong></div>`)
+        .join('')
+    : `<p class="muted">Furnitura hali yo'q.</p>`;
 }
 
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
+function bindEvents() {
+  document.getElementById('toggle-admin').addEventListener('click', () => {
+    elements.drawer.classList.toggle('hidden');
+  });
 
-  const template = {
-    id: crypto.randomUUID(),
-    name: document.getElementById('m-name').value.trim(),
-    width: Number(document.getElementById('m-width').value),
-    height: Number(document.getElementById('m-height').value),
-    depth: Number(document.getElementById('m-depth').value),
-    price: Number(document.getElementById('m-price').value),
-    furniture: parseFurniture(document.getElementById('m-furniture').value),
-    color: `hsl(${Math.floor(Math.random() * 360)} 60% 62%)`
-  };
+  document.getElementById('close-admin').addEventListener('click', () => {
+    elements.drawer.classList.add('hidden');
+  });
 
-  templates.unshift(template);
-  saveTemplates();
-  renderTemplates();
-  form.reset();
-});
+  document.getElementById('reset-scene').addEventListener('click', () => {
+    placedModules.forEach((m) => scene.remove(m.mesh));
+    placedModules = [];
+    renderProject();
+  });
 
-listEl.addEventListener('click', (e) => {
-  const addId = e.target.dataset.add;
-  const delId = e.target.dataset.del;
-  if (addId) addToScene(addId);
-  if (delId) {
-    templates = templates.filter((t) => t.id !== delId);
+  elements.categoryList.addEventListener('click', (e) => {
+    const cat = e.target.dataset.cat;
+    if (!cat) return;
+    currentCategory = cat;
+    renderCategories();
+    renderCatalog();
+  });
+
+  elements.catalogList.addEventListener('click', (e) => {
+    const id = e.target.dataset.add;
+    if (id) addToScene(id);
+  });
+
+  elements.placedList.addEventListener('click', (e) => {
+    const id = e.target.dataset.remove;
+    if (id) removePlaced(id);
+  });
+
+  elements.adminList.addEventListener('click', (e) => {
+    const id = e.target.dataset.delTemplate;
+    if (!id) return;
+    templates = templates.filter((t) => t.id !== id);
     saveTemplates();
-    renderTemplates();
-  }
-});
+    renderCategories();
+    renderCatalog();
+    renderAdminList();
+  });
 
-placedListEl.addEventListener('click', (e) => {
-  const removeId = e.target.dataset.remove;
-  if (removeId) removePlaced(removeId);
-});
+  document.getElementById('module-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const formData = {
+      id: crypto.randomUUID(),
+      category: document.getElementById('m-category').value.trim(),
+      name: document.getElementById('m-name').value.trim(),
+      width: Number(document.getElementById('m-width').value),
+      height: Number(document.getElementById('m-height').value),
+      depth: Number(document.getElementById('m-depth').value),
+      price: Number(document.getElementById('m-price').value),
+      furniture: parseFurniture(document.getElementById('m-furniture').value),
+      color: `hsl(${Math.floor(Math.random() * 360)} 45% 72%)`
+    };
+    templates.unshift(formData);
+    saveTemplates();
+    currentCategory = formData.category;
+    renderCategories();
+    renderCatalog();
+    renderAdminList();
+    e.target.reset();
+  });
+}
 
-renderTemplates();
-renderProjectSummary();
+bindEvents();
+renderCategories();
+renderCatalog();
+renderAdminList();
+renderProject();
