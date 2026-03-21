@@ -1,4 +1,5 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxyWSaRdn-4NZkkwJiAb2Q-uezsE8U_iFhjdSfsd4vZRHodaQ-aLhMNZe9ZwqjdVMjQ/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbxyWSaRdn-4NZkkwJiAb2Q-uezsE8U_iFhjdSfsd4vZRHodaQ-aLhMNZe9ZwqjdVMjQ/exec";
+const CUSTOM_MODULES_KEY = "customKitchenModules";
 const html5QrCode = new Html5Qrcode("reader");
 const viewportMeta = document.querySelector('meta[name="viewport"]');
 
@@ -13,51 +14,67 @@ function playSuccessBeep() {
         const gainNode = ctx.createGain();
         osc.connect(gainNode);
         gainNode.connect(ctx.destination);
-        osc.type = 'sine';
+        osc.type = "sine";
         osc.frequency.setValueAtTime(880, ctx.currentTime);
         gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
         osc.start();
         osc.stop(ctx.currentTime + 0.15);
-    } catch (e) { console.log("Audio xatosi", e); }
+    } catch (e) {
+        console.log("Audio xatosi", e);
+    }
+}
+
+function getCustomModules() {
+    return JSON.parse(localStorage.getItem(CUSTOM_MODULES_KEY) || "{}");
+}
+
+function setCustomModules(data) {
+    localStorage.setItem(CUSTOM_MODULES_KEY, JSON.stringify(data));
 }
 
 function saveToHistory(data) {
-    let history = JSON.parse(localStorage.getItem('scanHistory') || '[]');
-    history = history.filter(item => item.artikul !== data.artikul);
+    let history = JSON.parse(localStorage.getItem("scanHistory") || "[]");
+    history = history.filter((item) => item.artikul !== data.artikul);
     history.unshift(data);
     if (history.length > 10) history.pop();
-    localStorage.setItem('scanHistory', JSON.stringify(history));
+    localStorage.setItem("scanHistory", JSON.stringify(history));
     loadHistory();
 }
 
 function loadHistory() {
-    const list = document.getElementById('history-list');
-    let history = JSON.parse(localStorage.getItem('scanHistory') || '[]');
+    const list = document.getElementById("history-list");
+    let history = JSON.parse(localStorage.getItem("scanHistory") || "[]");
     if (history.length === 0) {
         list.innerHTML = "<p style='color:#7f8c8d; font-size: 14px;'>Hozircha tarix yo'q.</p>";
         return;
     }
-    list.innerHTML = history.map(item => {
-        let imgTag = '<div class="history-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;">PDF yo\'q</div>';
-        if (item.pdfUrl) {
-            let match = item.pdfUrl.match(/[-\w]{25,}/);
-            if (match) imgTag = `<img src="https://drive.google.com/thumbnail?id=${match[0]}&sz=w100-h100" class="history-img" alt="PDF">`;
-        }
-        return `
-        <div class="history-item" onclick="loadFromHistory('${item.artikul}')">
-            ${imgTag}
-            <div style="flex-grow:1;">
-                <strong>${item.artikul}</strong><br>
-                <span style="font-size:12px; color:#27ae60; font-weight:bold;">${item.nomi || 'Nomi kiritilmagan'}</span>
-            </div>
-            <span style="color:#7f8c8d; font-size:20px;">➔</span>
-        </div>`;
-    }).join('');
+
+    list.innerHTML = history
+        .map((item) => {
+            let imgTag =
+                '<div class="history-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;">PDF yo\'q</div>';
+            if (item.pdfUrl) {
+                let match = item.pdfUrl.match(/[-\w]{25,}/);
+                if (match) {
+                    imgTag = `<img src="https://drive.google.com/thumbnail?id=${match[0]}&sz=w100-h100" class="history-img" alt="PDF">`;
+                }
+            }
+            return `
+            <div class="history-item" onclick="loadFromHistory('${item.artikul}')">
+                ${imgTag}
+                <div style="flex-grow:1;">
+                    <strong>${item.artikul}</strong><br>
+                    <span style="font-size:12px; color:#27ae60; font-weight:bold;">${item.nomi || "Nomi kiritilmagan"}</span>
+                </div>
+                <span style="color:#7f8c8d; font-size:20px;">➔</span>
+            </div>`;
+        })
+        .join("");
 }
 
 function loadFromHistory(artikul) {
-    let history = JSON.parse(localStorage.getItem('scanHistory') || '[]');
-    let data = history.find(i => i.artikul === artikul);
+    let history = JSON.parse(localStorage.getItem("scanHistory") || "[]");
+    let data = history.find((i) => i.artikul === artikul);
     if (data) {
         currentData = data;
         enableNavs();
@@ -65,120 +82,163 @@ function loadFromHistory(artikul) {
     }
 }
 
-window.onload = loadHistory;
+window.onload = function () {
+    loadHistory();
+    renderAdminModuleList();
+};
 
 function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(`page-${pageId}`).classList.add('active');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    
-    if (pageId === 'home') {
-        document.getElementById('nav-home').classList.add('active');
-        document.getElementById('app-title').textContent = "Aristokrat Mebel";
+    document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+    document.getElementById(`page-${pageId}`).classList.add("active");
+    document.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
+
+    if (pageId === "home") {
+        document.getElementById("nav-home").classList.add("active");
+        document.getElementById("app-title").textContent = "Aristokrat Mebel";
+    } else if (pageId === "admin") {
+        document.getElementById("app-title").textContent = "Admin panel";
     }
 }
 
-function enableNavs() {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('disabled'));
-    document.getElementById('app-title').textContent = `Artikul: ${currentData.artikul}`;
+function openAdminPanel() {
+    renderAdminModuleList();
+    showPage("admin");
 }
+
+function enableNavs() {
+    document.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("disabled"));
+    document.getElementById("app-title").textContent = `Artikul: ${currentData.artikul}`;
+}
+
 function startScan() {
-    showPage('scanner');
-    document.getElementById('app-title').textContent = "Skanerlash...";
-    
-    html5QrCode.start(
-        { facingMode: "environment" }, 
-        { 
-            fps: 15, 
-            qrbox: { width: 250, height: 250 },
-            useBarCodeDetectorIfSupported: true,
-            formatsToSupport: [
-                Html5QrcodeSupportedFormats.QR_CODE,
-                Html5QrcodeSupportedFormats.CODE_128,
-                Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8
-            ]
-        }, 
-        onScanSuccess
-    ).then(() => {
-        document.getElementById('btn-torch').addEventListener('click', toggleTorch);
-    }).catch(err => alert("Kamera topilmadi yoki ruxsat yo'q!"));
+    showPage("scanner");
+    document.getElementById("app-title").textContent = "Skanerlash...";
+
+    html5QrCode
+        .start(
+            { facingMode: "environment" },
+            {
+                fps: 15,
+                qrbox: { width: 250, height: 250 },
+                useBarCodeDetectorIfSupported: true,
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                ],
+            },
+            onScanSuccess,
+        )
+        .then(() => {
+            document.getElementById("btn-torch").addEventListener("click", toggleTorch);
+        })
+        .catch(() => alert("Kamera topilmadi yoki ruxsat yo'q!"));
 }
 
 function toggleTorch() {
     torchOn = !torchOn;
     html5QrCode.applyVideoConstraints({ advanced: [{ torch: torchOn }] });
-    document.getElementById('btn-torch').style.background = torchOn ? "#f1c40f" : "#2980b9";
+    document.getElementById("btn-torch").style.background = torchOn ? "#f1c40f" : "#2980b9";
 }
 
 function stopScanner() {
-    html5QrCode.stop().then(() => { torchOn = false; showPage('home'); }).catch(() => { showPage('home'); });
+    html5QrCode
+        .stop()
+        .then(() => {
+            torchOn = false;
+            showPage("home");
+        })
+        .catch(() => {
+            showPage("home");
+        });
 }
 
 function onScanSuccess(decodedText) {
     playSuccessBeep();
-    html5QrCode.stop().then(() => { torchOn = false; fetchData(decodedText); }).catch(() => { fetchData(decodedText); });
+    html5QrCode
+        .stop()
+        .then(() => {
+            torchOn = false;
+            fetchData(decodedText);
+        })
+        .catch(() => {
+            fetchData(decodedText);
+        });
 }
 
 function fetchData(barcode) {
-    showPage('content');
-    document.getElementById('dynamic-content').innerHTML = "";
-    document.getElementById('skeleton-loader').classList.remove('hidden');
-    document.getElementById('app-title').textContent = `Qidirish: [${barcode}]`;
-    
+    showPage("content");
+    document.getElementById("dynamic-content").innerHTML = "";
+    document.getElementById("skeleton-loader").classList.remove("hidden");
+    document.getElementById("app-title").textContent = `Qidirish: [${barcode}]`;
+
+    const localModule = getCustomModules()[barcode];
+    if (localModule) {
+        document.getElementById("skeleton-loader").classList.add("hidden");
+        currentData = localModule;
+        saveToHistory(localModule);
+        enableNavs();
+        renderFurnitura();
+        return;
+    }
+
     fetch(`${API_URL}?barcode=${encodeURIComponent(barcode)}`)
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('skeleton-loader').classList.add('hidden');
+        .then((res) => res.json())
+        .then((data) => {
+            document.getElementById("skeleton-loader").classList.add("hidden");
             if (data.error) {
-                document.getElementById('dynamic-content').innerHTML = `<h3 style="color:red; text-align:center; padding:20px;">${data.error}</h3>`;
+                document.getElementById(
+                    "dynamic-content",
+                ).innerHTML = `<h3 style="color:red; text-align:center; padding:20px;">${data.error}</h3>`;
                 return;
             }
             currentData = data;
             saveToHistory(data);
             enableNavs();
             renderFurnitura();
-        }).catch(err => {
-            document.getElementById('skeleton-loader').classList.add('hidden');
+        })
+        .catch((err) => {
+            document.getElementById("skeleton-loader").classList.add("hidden");
             let errorMsg = "Tarmoq xatosi yoki CORS! Google Sheets 'Deploy' sozlamalarini tekshiring.";
             if (!navigator.onLine) errorMsg = "Internetga ulanish yo'q!";
-            
-            document.getElementById('dynamic-content').innerHTML = `
+
+            document.getElementById("dynamic-content").innerHTML = `
                 <div style="padding: 20px; text-align: center;">
                     <h3 style="color:red;">${errorMsg}</h3>
                     <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">Texnik xato: ${err.message}</p>
+                    <p style="margin-top: 8px;">Maslahat: Admin paneldan shu artikulni qo'lda qo'shing.</p>
                 </div>
             `;
         });
 }
 
 function updateNavStyle(type) {
-    showPage('content');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(`nav-${type === 'furnitura' ? 'fur' : type === 'pdf' ? 'pdf' : 'vid'}`).classList.add('active');
+    showPage("content");
+    document.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
+    document.getElementById(`nav-${type === "furnitura" ? "fur" : type === "pdf" ? "pdf" : "vid"}`).classList.add("active");
 }
-window.renderFurnitura = function() {
+
+window.renderFurnitura = function () {
     if (!currentData) return;
-    updateNavStyle('furnitura');
+    updateNavStyle("furnitura");
     let html = "";
     let furs = currentData.furnituralar;
-    
+
     if (!furs || Object.keys(furs).length === 0) {
         html = "<p style='text-align:center; padding: 20px;'>Bu modul uchun furnitura yo'q.</p>";
     } else {
         for (let category in furs) {
             if (!furs[category] || furs[category].length === 0) continue;
-
-            // Barchasi yopiq (▶) va open klassisiz boshlanadi
             html += `<div class="accordion-header" onclick="toggleAccordion(this)">${category} <span class="acc-icon">▶</span></div>`;
-            html += `<div class="accordion-body">`; 
-            
+            html += `<div class="accordion-body">`;
+
             furs[category].forEach((item, index) => {
-                let uid = `${currentData.artikul}_${category.replace(/[^a-zA-Z0-9]/g, '')}_${index}`;
-                let isChecked = localStorage.getItem(uid) === 'true';
-                let checkClass = isChecked ? 'checked' : '';
-                
+                let uid = `${currentData.artikul}_${category.replace(/[^a-zA-Z0-9]/g, "")}_${index}`;
+                let isChecked = localStorage.getItem(uid) === "true";
+                let checkClass = isChecked ? "checked" : "";
+
                 html += `
                 <div class="fur-item ${checkClass}" id="${uid}" onclick="toggleCheck('${uid}')">
                     <div class="fur-details">
@@ -190,54 +250,52 @@ window.renderFurnitura = function() {
             });
             html += `</div>`;
         }
-        // Pastda qolib ketmasligi uchun jismoniy bufer (Spacer)
         html += `<div style="height: 150px; width: 100%; pointer-events: none;"></div>`;
     }
-    document.getElementById('dynamic-content').innerHTML = html;
+    document.getElementById("dynamic-content").innerHTML = html;
     sortCheckedItems();
 };
 
-window.toggleAccordion = function(el) {
+window.toggleAccordion = function (el) {
     let body = el.nextElementSibling;
-    let icon = el.querySelector('.acc-icon');
-    let isOpen = body.classList.contains('open');
+    let icon = el.querySelector(".acc-icon");
+    let isOpen = body.classList.contains("open");
 
-    // Avval hamma Accordion larni yopish (Exclusive mantig'i)
-    document.querySelectorAll('.accordion-body').forEach(b => b.classList.remove('open'));
-    document.querySelectorAll('.acc-icon').forEach(i => i.textContent = '▶');
+    document.querySelectorAll(".accordion-body").forEach((b) => b.classList.remove("open"));
+    document.querySelectorAll(".acc-icon").forEach((i) => (i.textContent = "▶"));
 
-    // Agar hozir bosilgan guruh yopiq bo'lgan bo'lsa, uni ochish
     if (!isOpen) {
-        body.classList.add('open');
-        icon.textContent = '▼';
+        body.classList.add("open");
+        icon.textContent = "▼";
     }
 };
 
-window.toggleCheck = function(uid) {
+window.toggleCheck = function (uid) {
     let el = document.getElementById(uid);
-    let isChecked = el.classList.toggle('checked');
+    let isChecked = el.classList.toggle("checked");
     localStorage.setItem(uid, isChecked);
     sortCheckedItems();
 };
 
-window.sortCheckedItems = function() {
-    document.querySelectorAll('.accordion-body').forEach(body => {
-        let items = Array.from(body.querySelectorAll('.fur-item'));
+window.sortCheckedItems = function () {
+    document.querySelectorAll(".accordion-body").forEach((body) => {
+        let items = Array.from(body.querySelectorAll(".fur-item"));
         items.sort((a, b) => {
-            let aChk = a.classList.contains('checked') ? 1 : 0;
-            let bChk = b.classList.contains('checked') ? 1 : 0;
+            let aChk = a.classList.contains("checked") ? 1 : 0;
+            let bChk = b.classList.contains("checked") ? 1 : 0;
             return aChk - bChk;
         });
-        items.forEach(item => body.appendChild(item));
+        items.forEach((item) => body.appendChild(item));
     });
 };
-window.renderIframe = function(type) {
+
+window.renderIframe = function (type) {
     if (!currentData) return;
     updateNavStyle(type);
-    
-    let url = type === 'pdf' ? currentData.pdfUrl : currentData.videoUrl;
+
+    let url = type === "pdf" ? currentData.pdfUrl : currentData.videoUrl;
     if (!url) {
-        document.getElementById('dynamic-content').innerHTML = `<p style='text-align:center; padding: 20px;'>Bu qism kiritilmagan.</p>`;
+        document.getElementById("dynamic-content").innerHTML = `<p style='text-align:center; padding: 20px;'>Bu qism kiritilmagan.</p>`;
         return;
     }
 
@@ -250,11 +308,13 @@ window.renderIframe = function(type) {
     } else if (type === "pdf") {
         let fileIdMatch = url.match(/[-\w]{25,}/);
         if (fileIdMatch) {
-            finalUrl = `https://docs.google.com/viewer?url=${encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fileIdMatch[0])}&embedded=true`;
+            finalUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
+                "https://drive.google.com/uc?export=download&id=" + fileIdMatch[0],
+            )}&embedded=true`;
         }
     }
 
-    document.getElementById('dynamic-content').innerHTML = `
+    document.getElementById("dynamic-content").innerHTML = `
         <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
             <button class="btn btn-primary" style="padding:10px; font-size:14px; background:#27ae60;" onclick="openNativeFullscreen('${finalUrl}', '${type}')">⛶ To'liq ekran</button>
         </div>
@@ -265,16 +325,139 @@ window.renderIframe = function(type) {
     `;
 };
 
-window.openNativeFullscreen = function(url, type) {
-    if (viewportMeta) viewportMeta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes");
+window.openNativeFullscreen = function (url, type) {
+    if (viewportMeta)
+        viewportMeta.setAttribute(
+            "content",
+            "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes",
+        );
     document.getElementById("modal-title-text").textContent = type === "pdf" ? "Chizma" : "Video";
     document.getElementById("anti-leak-shield").classList.remove("hidden");
     document.getElementById("iframe-container").innerHTML = `<iframe src="${url}" class="secure-iframe" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
     document.getElementById("fullscreen-modal").classList.remove("hidden");
 };
 
-window.closeNativeFullscreen = function() {
-    if (viewportMeta) viewportMeta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover");
+window.closeNativeFullscreen = function () {
+    if (viewportMeta)
+        viewportMeta.setAttribute(
+            "content",
+            "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
+        );
     document.getElementById("iframe-container").innerHTML = "";
     document.getElementById("fullscreen-modal").classList.add("hidden");
 };
+
+function parseFurnituraRows(rawText) {
+    const map = {};
+    rawText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => {
+            const [category, nomi, ulchov, soni] = line.split("|").map((x) => (x || "").trim());
+            if (!category || !nomi) return;
+            if (!map[category]) map[category] = [];
+            map[category].push({
+                nomi,
+                ulchov: ulchov || "-",
+                soni: soni || "1",
+            });
+        });
+    return map;
+}
+
+window.saveAdminModule = function () {
+    const artikul = document.getElementById("admin-artikul").value.trim();
+    const nomi = document.getElementById("admin-nomi").value.trim();
+    const pdfUrl = document.getElementById("admin-pdf").value.trim();
+    const videoUrl = document.getElementById("admin-video").value.trim();
+    const furnituraText = document.getElementById("admin-furnitura").value.trim();
+
+    if (!artikul) {
+        setAdminStatus("Artikul kiritilishi shart.", true);
+        return;
+    }
+
+    const furnituralar = parseFurnituraRows(furnituraText);
+    const modules = getCustomModules();
+    modules[artikul] = {
+        artikul,
+        nomi: nomi || "Nomi kiritilmagan",
+        pdfUrl,
+        videoUrl,
+        furnituralar,
+    };
+    setCustomModules(modules);
+    renderAdminModuleList();
+    setAdminStatus(`✅ ${artikul} saqlandi.`);
+};
+
+window.clearAdminForm = function () {
+    ["admin-artikul", "admin-nomi", "admin-pdf", "admin-video", "admin-furnitura"].forEach((id) => {
+        document.getElementById(id).value = "";
+    });
+    setAdminStatus("Forma tozalandi.");
+};
+
+window.editAdminModule = function (artikul) {
+    const module = getCustomModules()[artikul];
+    if (!module) return;
+
+    document.getElementById("admin-artikul").value = module.artikul || "";
+    document.getElementById("admin-nomi").value = module.nomi || "";
+    document.getElementById("admin-pdf").value = module.pdfUrl || "";
+    document.getElementById("admin-video").value = module.videoUrl || "";
+
+    const lines = [];
+    Object.keys(module.furnituralar || {}).forEach((cat) => {
+        (module.furnituralar[cat] || []).forEach((item) => {
+            lines.push(`${cat}|${item.nomi || ""}|${item.ulchov || ""}|${item.soni || ""}`);
+        });
+    });
+    document.getElementById("admin-furnitura").value = lines.join("\n");
+    setAdminStatus(`✏️ ${artikul} tahrirlash uchun yuklandi.`);
+};
+
+window.deleteAdminModule = function (artikul) {
+    const modules = getCustomModules();
+    delete modules[artikul];
+    setCustomModules(modules);
+    renderAdminModuleList();
+    setAdminStatus(`🗑️ ${artikul} o'chirildi.`);
+};
+
+function renderAdminModuleList() {
+    const listEl = document.getElementById("admin-module-list");
+    if (!listEl) return;
+
+    const modules = getCustomModules();
+    const keys = Object.keys(modules);
+
+    if (keys.length === 0) {
+        listEl.innerHTML = "<p style='color:#7f8c8d;'>Hozircha admin panelda modul yo'q.</p>";
+        return;
+    }
+
+    listEl.innerHTML = keys
+        .map((artikul) => {
+            const item = modules[artikul];
+            return `
+            <div class="admin-item">
+                <div>
+                    <strong>${item.artikul}</strong>
+                    <p>${item.nomi || "Nomi kiritilmagan"}</p>
+                </div>
+                <div class="admin-item-actions">
+                    <button class="btn btn-primary" onclick="editAdminModule('${item.artikul}')">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteAdminModule('${item.artikul}')">Delete</button>
+                </div>
+            </div>`;
+        })
+        .join("");
+}
+
+function setAdminStatus(msg, isError = false) {
+    const status = document.getElementById("admin-status");
+    status.textContent = msg;
+    status.style.color = isError ? "#e74c3c" : "#27ae60";
+}
