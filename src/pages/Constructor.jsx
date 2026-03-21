@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, TABLES } from '../lib/supabase'
 
 // ─── Scale ─────────────────────────────────────────────────────────────────
 const S        = 1.9
@@ -36,7 +36,7 @@ export default function Constructor({ onAdmin }) {
     const load = async () => {
       setLoading(true)
       const { data, error } = await supabase
-        .from('modules')
+        .from(TABLES.modules)
         .select('*')
         .eq('active', true)
         .order('sort_order')
@@ -96,7 +96,7 @@ export default function Constructor({ onAdmin }) {
     if (all.length === 0)        { showToast('Avval modul qo\'shing!', 'error'); return }
 
     setSubmitting(true)
-    const { error } = await supabase.from('orders').insert({
+    const { error } = await supabase.from(TABLES.orders).insert({
       items: all.map(m => ({ id: m.id, label: m.label, width: m.width, row: m.row, price: m.price, color: m.color })),
       total_price:    totalP,
       total_width_cm: totalW,
