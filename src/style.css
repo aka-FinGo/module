@@ -1,0 +1,129 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #1f2937;
+  background: #f5f6f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  padding: 16px;
+  border-right: 1px solid #e4e4e7;
+  overflow: auto;
+  background: #fff;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.panel {
+  margin-top: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.88rem;
+  color: #374151;
+}
+
+input,
+textarea,
+button {
+  width: 100%;
+  margin-top: 5px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+}
+
+button:hover {
+  opacity: 0.95;
+}
+
+.danger {
+  background: #dc2626;
+}
+
+.row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+#catalogList,
+#sceneItems {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 0.85rem;
+}
+
+.card .meta {
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.total {
+  margin-top: 10px;
+  font-size: 1rem;
+}
+
+main {
+  position: relative;
+  min-height: 100vh;
+}
+
+#sceneCanvas {
+  display: block;
+  width: 100%;
+  height: 100vh;
+}
+
+@media (max-width: 960px) {
+  #app {
+    grid-template-columns: 1fr;
+  }
+
+  #sceneCanvas {
+    height: 55vh;
+  }
+}
